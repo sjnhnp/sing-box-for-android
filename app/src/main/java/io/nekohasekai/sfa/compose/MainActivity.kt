@@ -2,7 +2,9 @@ package io.nekohasekai.sfa.compose
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.ContentResolver
 import android.content.Intent
+import android.net.Uri
 import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
@@ -78,7 +80,6 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
-import androidx.window.core.layout.WindowSizeClass
 import dev.jeziellago.compose.markdowntext.MarkdownText
 import io.nekohasekai.libbox.Libbox
 import io.nekohasekai.sfa.Application
@@ -86,6 +87,8 @@ import io.nekohasekai.sfa.BuildConfig
 import io.nekohasekai.sfa.R
 import io.nekohasekai.sfa.bg.ServiceConnection
 import io.nekohasekai.sfa.bg.ServiceNotification
+import io.nekohasekai.sfa.compat.WindowSizeClassCompat
+import io.nekohasekai.sfa.compat.isWidthAtLeastBreakpointCompat
 import io.nekohasekai.sfa.compose.base.GlobalEventBus
 import io.nekohasekai.sfa.compose.base.SelectableMessageDialog
 import io.nekohasekai.sfa.compose.base.UiEvent
@@ -98,6 +101,7 @@ import io.nekohasekai.sfa.compose.navigation.ProfileRoutes
 import io.nekohasekai.sfa.compose.navigation.SFANavHost
 import io.nekohasekai.sfa.compose.navigation.Screen
 import io.nekohasekai.sfa.compose.navigation.bottomNavigationScreens
+import io.nekohasekai.sfa.compose.screen.configuration.ProfileImportHandler
 import io.nekohasekai.sfa.compose.screen.connections.ConnectionDetailsScreen
 import io.nekohasekai.sfa.compose.screen.connections.ConnectionsPage
 import io.nekohasekai.sfa.compose.screen.connections.ConnectionsViewModel
@@ -133,7 +137,12 @@ class MainActivity :
     private var showBackgroundLocationDialog by mutableStateOf(false)
     private var showImportProfileDialog by mutableStateOf(false)
     private var pendingImportProfile by mutableStateOf<Triple<String, String, String>?>(null)
+    private var showImportLocalProfileDialog by mutableStateOf(false)
+    private var pendingImportLocalProfileName by mutableStateOf<String?>(null)
+    private var pendingImportLocalProfileUri by mutableStateOf<Uri?>(null)
     private var newProfileArgs by mutableStateOf(NewProfileArgs())
+    private var parseImportLocalProfileJob: Job? = null
+    private var pendingIntentErrorMessage by mutableStateOf<String?>(null)
 
     private val notificationPermissionLauncher =
         registerForActivityResult(
@@ -221,10 +230,34 @@ class MainActivity :
                 pendingImportProfile = Triple(profile.name, profile.host, profile.url)
                 showImportProfileDialog = true
             } catch (e: Exception) {
-                lifecycleScope.launch {
-                    GlobalEventBus.emit(UiEvent.ErrorMessage(e.message ?: "Failed to parse profile link"))
-                }
+                pendingIntentErrorMessage = e.message ?: "Failed to parse profile link"
             }
+            return
+        }
+
+        if (intent.action == Intent.ACTION_VIEW &&
+            (uri.scheme == ContentResolver.SCHEME_CONTENT || uri.scheme == ContentResolver.SCHEME_FILE)
+        ) {
+            parseImportLocalProfileJob?.cancel()
+            parseImportLocalProfileJob =
+                lifecycleScope.launch(Dispatchers.IO) {
+                    val importHandler = ProfileImportHandler(this@MainActivity)
+                    when (val result = importHandler.parseUri(uri)) {
+                        is ProfileImportHandler.UriParseResult.Success -> {
+                            withContext(Dispatchers.Main) {
+                                pendingImportLocalProfileName = result.name
+                                pendingImportLocalProfileUri = uri
+                                showImportLocalProfileDialog = true
+                            }
+                        }
+
+                        is ProfileImportHandler.UriParseResult.Error -> {
+                            withContext(Dispatchers.Main) {
+                                pendingIntentErrorMessage = result.message
+                            }
+                        }
+                    }
+                }
         }
     }
 
@@ -278,10 +311,11 @@ class MainActivity :
         val currentDestination = navBackStackEntry?.destination
         val currentRoute = currentDestination?.route
         val scope = rememberCoroutineScope()
+        val importHandler = remember { ProfileImportHandler(this@MainActivity) }
 
         val windowSizeClass = currentWindowAdaptiveInfo().windowSizeClass
         val useNavigationRail =
-            windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)
+            windowSizeClass.isWidthAtLeastBreakpointCompat(WindowSizeClassCompat.WIDTH_DP_MEDIUM_LOWER_BOUND)
 
         // Snackbar state
         val snackbarHostState = remember { SnackbarHostState() }
@@ -295,6 +329,14 @@ class MainActivity :
         // Error dialog state for UiEvent.ShowError
         var showErrorDialog by remember { mutableStateOf(false) }
         var errorMessage by remember { mutableStateOf("") }
+        val pendingIntentError = pendingIntentErrorMessage
+        LaunchedEffect(pendingIntentError) {
+            if (pendingIntentError != null) {
+                errorMessage = pendingIntentError
+                showErrorDialog = true
+                pendingIntentErrorMessage = null
+            }
+        }
         val topBarState = remember { mutableStateOf(emptyList<TopBarEntry>()) }
         val topBarController = remember { TopBarController(topBarState) }
         val topBarOverride = topBarState.value.lastOrNull()?.content
@@ -372,6 +414,51 @@ class MainActivity :
                         pendingImportProfile = null
                     }) {
                         Text(stringResource(android.R.string.cancel))
+                    }
+                },
+            )
+        }
+
+        if (showImportLocalProfileDialog && pendingImportLocalProfileUri != null && pendingImportLocalProfileName != null) {
+            val importName = pendingImportLocalProfileName!!
+            val importUri = pendingImportLocalProfileUri!!
+            AlertDialog(
+                onDismissRequest = {
+                    showImportLocalProfileDialog = false
+                    pendingImportLocalProfileName = null
+                    pendingImportLocalProfileUri = null
+                },
+                title = { Text(stringResource(R.string.import_profile_confirm_title)) },
+                text = { Text(stringResource(R.string.import_profile_confirm_message, importName)) },
+                confirmButton = {
+                    TextButton(onClick = {
+                        showImportLocalProfileDialog = false
+                        pendingImportLocalProfileName = null
+                        pendingImportLocalProfileUri = null
+                        scope.launch {
+                            when (val result = importHandler.importFromUri(importUri)) {
+                                is ProfileImportHandler.ImportResult.Success -> {
+                                    navController.navigate(ProfileRoutes.editProfile(result.profile.id)) {
+                                        launchSingleTop = true
+                                    }
+                                }
+                                is ProfileImportHandler.ImportResult.Error -> {
+                                    errorMessage = result.message
+                                    showErrorDialog = true
+                                }
+                            }
+                        }
+                    }) {
+                        Text(stringResource(R.string.import_action))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = {
+                        showImportLocalProfileDialog = false
+                        pendingImportLocalProfileName = null
+                        pendingImportLocalProfileUri = null
+                    }) {
+                        Text(stringResource(R.string.cancel))
                     }
                 },
             )
@@ -927,46 +1014,47 @@ class MainActivity :
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .fillMaxHeight(0.9f),
+                        .fillMaxHeight(),
                 ) {
-                    // Header
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 24.dp)
-                            .padding(bottom = 16.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = stringResource(R.string.title_groups),
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.Medium,
-                            color = MaterialTheme.colorScheme.onSurface,
-                        )
-                        if (groupsUiState.groups.isNotEmpty()) {
-                            IconButton(onClick = { groupsViewModel.toggleAllGroups() }) {
-                                Icon(
-                                    imageVector = if (allCollapsed) {
-                                        Icons.Default.UnfoldMore
-                                    } else {
-                                        Icons.Default.UnfoldLess
-                                    },
-                                    contentDescription = if (allCollapsed) {
-                                        stringResource(R.string.expand_all)
-                                    } else {
-                                        stringResource(R.string.collapse_all)
-                                    },
-                                )
-                            }
-                        }
-                    }
-
                     // Groups content
                     GroupsCard(
                         serviceStatus = currentServiceStatus,
                         commandClient = dashboardViewModel.commandClient,
                         viewModel = groupsViewModel,
+                        listHeaderContent = {
+                            Row(
+                                modifier =
+                                Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 8.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Text(
+                                    text = stringResource(R.string.title_groups),
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                )
+                                if (groupsUiState.groups.isNotEmpty()) {
+                                    IconButton(onClick = { groupsViewModel.toggleAllGroups() }) {
+                                        Icon(
+                                            imageVector = if (allCollapsed) {
+                                                Icons.Default.UnfoldMore
+                                            } else {
+                                                Icons.Default.UnfoldLess
+                                            },
+                                            contentDescription = if (allCollapsed) {
+                                                stringResource(R.string.expand_all)
+                                            } else {
+                                                stringResource(R.string.collapse_all)
+                                            },
+                                        )
+                                    }
+                                }
+                            }
+                        },
+                        asSheet = true,
                         modifier = Modifier.fillMaxSize(),
                     )
                 }
@@ -1010,7 +1098,7 @@ class MainActivity :
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .fillMaxHeight(0.9f),
+                        .fillMaxHeight(),
                 ) {
                     if (displayConnection != null) {
                         ConnectionDetailsScreen(
@@ -1019,11 +1107,13 @@ class MainActivity :
                             onClose = {
                                 selectedConnectionId?.let { connectionsViewModel.closeConnection(it) }
                             },
+                            asSheet = true,
                         )
                     } else {
                         ConnectionsPage(
                             serviceStatus = currentServiceStatus,
                             viewModel = connectionsViewModel,
+                            asSheet = true,
                             showTitle = true,
                             onConnectionClick = { selectedConnectionId = it },
                             modifier = Modifier.fillMaxSize(),
