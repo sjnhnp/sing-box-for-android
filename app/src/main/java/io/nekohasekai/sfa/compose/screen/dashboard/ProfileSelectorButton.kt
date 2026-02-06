@@ -32,13 +32,10 @@ import io.nekohasekai.sfa.database.Profile
 fun ProfileSelectorButton(selectedProfile: Profile?, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Surface(
         onClick = onClick,
-        modifier = modifier.fillMaxWidth().height(48.dp),
-        shape = RoundedCornerShape(12.dp),
-        color = if (isSystemInDarkTheme()) {
-            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-        } else {
-            MaterialTheme.colorScheme.surfaceDim
-        },
+        modifier = modifier.fillMaxWidth().height(52.dp),
+        shape = RoundedCornerShape(16.dp), // Increased roundness
+        color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        tonalElevation = 2.dp,
     ) {
         Row(
             modifier = Modifier
@@ -54,8 +51,8 @@ fun ProfileSelectorButton(selectedProfile: Profile?, onClick: () -> Unit, modifi
                 Icon(
                     imageVector = profileIcon,
                     contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(24.dp), // Slightly larger icon
+                    tint = MaterialTheme.colorScheme.primary,
                 )
 
                 Spacer(modifier = Modifier.width(12.dp))

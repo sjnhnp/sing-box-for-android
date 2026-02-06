@@ -76,7 +76,7 @@ fun LineChart(
                     Offset(x, y)
                 }
 
-            // Build the path
+            // Build the path with Bezier curves for smoothness
             path.moveTo(points[0].x, points[0].y)
             for (i in 1 until points.size) {
                 val progress = if (animate) animationProgress.value else 1f
@@ -85,9 +85,12 @@ fun LineChart(
                 if (i <= pointIndex) {
                     val prev = points[i - 1]
                     val current = points[i]
-
-                    // Simple line connection
-                    path.lineTo(current.x, current.y)
+                    val controlX = (prev.x + current.x) / 2
+                    path.cubicTo(
+                        controlX, prev.y,
+                        controlX, current.y,
+                        current.x, current.y
+                    )
                 }
             }
 
@@ -97,7 +100,7 @@ fun LineChart(
                 color = lineColor,
                 style =
                 Stroke(
-                    width = 2.dp.toPx(),
+                    width = 2.5.dp.toPx(),
                     cap = StrokeCap.Round,
                     join = StrokeJoin.Round,
                 ),
@@ -109,21 +112,23 @@ fun LineChart(
 
             // Complete the fill area
             if (points.isNotEmpty()) {
-                val progressIndex = ((points.size - 1) * animationProgress.value).toInt()
-                val lastPoint =
-                    if (progressIndex >= 0 && progressIndex < points.size) {
-                        points[progressIndex]
-                    } else {
-                        points.last()
-                    }
+                val progressIndex = ((points.size - 1) * animationProgress.value).toInt().coerceAtMost(points.size - 1)
+                val lastPoint = points[progressIndex]
 
                 fillPath.lineTo(lastPoint.x, height)
                 fillPath.lineTo(0f, height)
-                fillPath.lineTo(points[0].x, points[0].y)
+                fillPath.close()
 
                 drawPath(
                     path = fillPath,
-                    color = lineColor.copy(alpha = 0.1f),
+                    brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                        colors = listOf(
+                            lineColor.copy(alpha = 0.25f),
+                            lineColor.copy(alpha = 0.0f)
+                        ),
+                        startY = 0f,
+                        endY = height
+                    )
                 )
             }
         }

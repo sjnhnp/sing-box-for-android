@@ -56,6 +56,7 @@
     <string name="title_connections">Connections</string>
     <string name="title_others">Others</string>
     <string name="title_scan_result">Scan Result</string>
+    <string name="total">Total</string>
 
     <!-- Status -->
     <string name="status_default">Service not started</string>

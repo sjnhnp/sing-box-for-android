@@ -1,19 +1,16 @@
 package io.nekohasekai.sfa.compose.component
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Folder
@@ -23,19 +20,19 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableLongStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import io.nekohasekai.sfa.R
+import io.nekohasekai.sfa.compose.theme.ServiceRunning
+import io.nekohasekai.sfa.compose.theme.ServiceStopped
+import io.nekohasekai.sfa.compose.theme.ServiceError
+import io.nekohasekai.sfa.compose.theme.WarningOrange
 import io.nekohasekai.sfa.constant.Status
 import kotlinx.coroutines.delay
 
@@ -52,6 +49,27 @@ fun ServiceStatusBar(
     onStopClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    // Pulse animation for "Started" state
+    val infiniteTransition = rememberInfiniteTransition(label = "PulseTransition")
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.3f,
+        targetValue = 0.9f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "PulseAlpha"
+    )
+    val pulseScale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.6f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "PulseScale"
+    )
+
     AnimatedVisibility(
         visible = visible,
         enter = slideInVertically { it } + fadeIn(),
@@ -59,18 +77,53 @@ fun ServiceStatusBar(
         modifier = modifier,
     ) {
         Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = MaterialTheme.colorScheme.surfaceContainer,
-            tonalElevation = 3.dp,
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 12.dp, vertical = 8.dp)
+                .clip(RoundedCornerShape(20.dp)),
+            color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.85f),
+            tonalElevation = 8.dp,
+            shadowElevation = 6.dp, // Increased shadow
+            border = androidx.compose.foundation.BorderStroke(
+                width = 0.5.dp,
+                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+            )
         ) {
             Row(
                 modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.spacedBy(16.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
+                // Status with Pulse Light
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(start = 4.dp)) {
+                    if (serviceStatus == Status.Started) {
+                        Canvas(modifier = Modifier.size(20.dp)) {
+                            drawCircle(
+                                color = ServiceRunning.copy(alpha = 1f - pulseAlpha),
+                                radius = (size.minDimension / 2) * pulseScale,
+                                style = Stroke(width = 2.dp.toPx())
+                            )
+                        }
+                    }
+                    
+                    Box(
+                        modifier = Modifier
+                            .size(10.dp)
+                            .clip(RoundedCornerShape(5.dp))
+                            .background(
+                                when (serviceStatus) {
+                                    Status.Started -> ServiceRunning
+                                    Status.Starting -> WarningOrange
+                                    Status.Stopping -> ServiceError
+                                    else -> ServiceStopped
+                                }
+                            )
+                    )
+                }
+
                 // Status text
                 StatusItem(
                     text = when (serviceStatus) {
@@ -86,51 +139,49 @@ fun ServiceStatusBar(
                 Row(
                     modifier =
                     Modifier
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(MaterialTheme.colorScheme.secondaryContainer)
+                        .clip(RoundedCornerShape(12.dp))
+                        .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f))
                         .clickable(onClick = onConnectionsClick)
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
                 ) {
                     Text(
                         text = connectionsCount.toString(),
                         style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Medium,
+                        fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSecondaryContainer,
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Icon(
                         imageVector = Icons.Outlined.Cable,
                         contentDescription = stringResource(R.string.title_connections),
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(16.dp),
                         tint = MaterialTheme.colorScheme.onSecondaryContainer,
                     )
                 }
 
-                // Groups button (only show if hasGroups)
+                // Groups button
                 if (hasGroups) {
                     Row(
                         modifier =
                         Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(MaterialTheme.colorScheme.secondaryContainer)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f))
                             .clickable(onClick = onGroupsClick)
-                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
                     ) {
                         Text(
                             text = groupsCount.toString(),
                             style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Medium,
+                            fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSecondaryContainer,
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Icon(
                             imageVector = Icons.Default.Folder,
                             contentDescription = stringResource(R.string.title_groups),
-                            modifier = Modifier.size(18.dp),
+                            modifier = Modifier.size(16.dp),
                             tint = MaterialTheme.colorScheme.onSecondaryContainer,
                         )
                     }
@@ -140,10 +191,10 @@ fun ServiceStatusBar(
                 Row(
                     modifier =
                     Modifier
-                        .clip(RoundedCornerShape(8.dp))
+                        .clip(RoundedCornerShape(12.dp))
                         .background(MaterialTheme.colorScheme.primaryContainer)
                         .clickable(onClick = onStopClick)
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                        .padding(horizontal = 10.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center,
                 ) {
@@ -168,7 +219,7 @@ private fun StatusItem(text: String, modifier: Modifier = Modifier) {
     Text(
         text = text,
         style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Medium,
+        fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.onSurface,
         modifier = modifier,
     )
@@ -200,7 +251,7 @@ fun UptimeText(startTime: Long, modifier: Modifier = Modifier) {
     Text(
         text = formattedTime,
         style = MaterialTheme.typography.labelLarge,
-        fontWeight = FontWeight.Medium,
+        fontWeight = FontWeight.Bold,
         color = MaterialTheme.colorScheme.onPrimaryContainer,
         modifier = modifier,
     )

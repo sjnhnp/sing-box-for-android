@@ -32,47 +32,49 @@ fun DownloadTrafficCard(downlink: String, downlinkTotal: String, downlinkHistory
             modifier =
             Modifier
                 .fillMaxWidth()
-                .padding(16.dp),
+                .padding(12.dp), // Reduced padding
         ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
             ) {
                 Icon(
                     imageVector = Icons.Outlined.Download,
                     contentDescription = null,
-                    modifier = Modifier.size(20.dp),
-                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(16.dp),
+                    tint = MaterialTheme.colorScheme.secondary,
                 )
-                Spacer(modifier = Modifier.width(8.dp))
+                Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = stringResource(R.string.download),
-                    style = MaterialTheme.typography.titleMedium,
+                    style = MaterialTheme.typography.labelMedium,
                     fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.secondary
                 )
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             Text(
                 text = downlink,
-                style = MaterialTheme.typography.headlineSmall,
-                fontWeight = FontWeight.Medium,
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Black,
                 color = MaterialTheme.colorScheme.onSurface,
             )
 
             Text(
-                text = downlinkTotal,
-                style = MaterialTheme.typography.bodyMedium,
+                text = "${stringResource(R.string.total)}: $downlinkTotal",
+                style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             LineChart(
                 data = downlinkHistory,
-                lineColor = MaterialTheme.colorScheme.primary,
+                lineColor = MaterialTheme.colorScheme.secondary,
                 animate = false,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().height(40.dp), // Thinner chart
             )
         }
     }

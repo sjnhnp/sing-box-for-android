@@ -127,12 +127,9 @@ private fun ModeDropdown(modes: List<String>, selectedMode: String, onModeSelect
     Box(modifier = Modifier.fillMaxWidth()) {
         Surface(
             onClick = { expanded = true },
-            shape = RoundedCornerShape(12.dp),
-            color = if (isSystemInDarkTheme()) {
-                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
-            } else {
-                MaterialTheme.colorScheme.surfaceDim
-            },
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            tonalElevation = 2.dp,
             modifier = Modifier.fillMaxWidth(),
         ) {
             Row(
