@@ -475,7 +475,7 @@ fun EditProfileContentScreen(
             }
 
             // Large file warning banner
-            AnimatedVisibility(
+            androidx.compose.animation.AnimatedVisibility(
                 visible = uiState.showLargeFileWarning,
                 modifier = Modifier.align(Alignment.TopCenter),
                 enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),

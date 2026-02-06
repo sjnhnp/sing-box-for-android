@@ -113,6 +113,7 @@ fun ServiceStatusBar(
             shape = StatusBarShape,
         ) {
             // 添加微妙的渐变边框
+            val outlineColor = MaterialTheme.colorScheme.outline
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -120,8 +121,8 @@ fun ServiceStatusBar(
                         drawRoundRect(
                             brush = Brush.linearGradient(
                                 colors = listOf(
-                                    MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
-                                    MaterialTheme.colorScheme.outline.copy(alpha = 0.05f),
+                                    outlineColor.copy(alpha = 0.15f),
+                                    outlineColor.copy(alpha = 0.05f),
                                 )
                             ),
                             cornerRadius = CornerRadius(24.dp.toPx()),
