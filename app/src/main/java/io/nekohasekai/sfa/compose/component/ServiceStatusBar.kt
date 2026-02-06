@@ -6,10 +6,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -24,6 +21,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -33,8 +33,14 @@ import io.nekohasekai.sfa.compose.theme.ServiceRunning
 import io.nekohasekai.sfa.compose.theme.ServiceStopped
 import io.nekohasekai.sfa.compose.theme.ServiceError
 import io.nekohasekai.sfa.compose.theme.WarningOrange
+import io.nekohasekai.sfa.compose.theme.StatusBarShape
 import io.nekohasekai.sfa.constant.Status
 import kotlinx.coroutines.delay
+
+// ============================================================================
+// 2026 Service Status Bar - 精致状态栏
+// 设计理念：柔和的玻璃拟态效果、精致的呼吸动效、考究的细节
+// ============================================================================
 
 @Composable
 fun ServiceStatusBar(
@@ -49,164 +55,123 @@ fun ServiceStatusBar(
     onStopClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    // Pulse animation for "Started" state
-    val infiniteTransition = rememberInfiniteTransition(label = "PulseTransition")
-    val pulseAlpha by infiniteTransition.animateFloat(
-        initialValue = 0.3f,
-        targetValue = 0.9f,
+    // 柔和的呼吸动效（更慢、更细腻）
+    val infiniteTransition = rememberInfiniteTransition(label = "BreathingTransition")
+    
+    // 呼吸光晕透明度
+    val breatheAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.2f,
+        targetValue = 0.6f,
         animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = FastOutSlowInEasing),
+            animation = tween(
+                durationMillis = 2000,  // 更慢的呼吸节奏
+                easing = CubicBezierEasing(0.4f, 0f, 0.2f, 1f)
+            ),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "PulseAlpha"
+        label = "BreathAlpha"
     )
-    val pulseScale by infiniteTransition.animateFloat(
+    
+    // 呼吸光晕缩放
+    val breatheScale by infiniteTransition.animateFloat(
         initialValue = 1f,
-        targetValue = 1.6f,
+        targetValue = 1.4f,  // 更小的缩放范围
         animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = FastOutSlowInEasing),
+            animation = tween(
+                durationMillis = 2000,
+                easing = CubicBezierEasing(0.4f, 0f, 0.2f, 1f)
+            ),
             repeatMode = RepeatMode.Reverse
         ),
-        label = "PulseScale"
+        label = "BreathScale"
     )
 
     AnimatedVisibility(
         visible = visible,
-        enter = slideInVertically { it } + fadeIn(),
-        exit = slideOutVertically { it } + fadeOut(),
+        enter = slideInVertically(
+            initialOffsetY = { it },
+            animationSpec = spring(
+                dampingRatio = Spring.DampingRatioMediumBouncy,
+                stiffness = Spring.StiffnessLow
+            )
+        ) + fadeIn(animationSpec = tween(300)),
+        exit = slideOutVertically(
+            targetOffsetY = { it },
+            animationSpec = tween(200, easing = FastOutSlowInEasing)
+        ) + fadeOut(animationSpec = tween(150)),
         modifier = modifier,
     ) {
+        // 玻璃拟态容器
         Surface(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 8.dp)
-                .clip(RoundedCornerShape(20.dp)),
-            color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.85f),
-            tonalElevation = 8.dp,
-            shadowElevation = 6.dp, // Increased shadow
-            border = androidx.compose.foundation.BorderStroke(
-                width = 0.5.dp,
-                color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
-            )
+                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .clip(StatusBarShape),
+            color = MaterialTheme.colorScheme.surfaceContainer.copy(alpha = 0.92f),
+            tonalElevation = 6.dp,
+            shadowElevation = 8.dp,
+            shape = StatusBarShape,
         ) {
-            Row(
-                modifier =
-                Modifier
+            // 添加微妙的渐变边框
+            Box(
+                modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.spacedBy(16.dp),
-                verticalAlignment = Alignment.CenterVertically,
+                    .drawBehind {
+                        drawRoundRect(
+                            brush = Brush.linearGradient(
+                                colors = listOf(
+                                    MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
+                                    MaterialTheme.colorScheme.outline.copy(alpha = 0.05f),
+                                )
+                            ),
+                            cornerRadius = CornerRadius(24.dp.toPx()),
+                            style = Stroke(width = 1.dp.toPx())
+                        )
+                    }
             ) {
-                // Status with Pulse Light
-                Box(contentAlignment = Alignment.Center, modifier = Modifier.padding(start = 4.dp)) {
-                    if (serviceStatus == Status.Started) {
-                        Canvas(modifier = Modifier.size(20.dp)) {
-                            drawCircle(
-                                color = ServiceRunning.copy(alpha = 1f - pulseAlpha),
-                                radius = (size.minDimension / 2) * pulseScale,
-                                style = Stroke(width = 2.dp.toPx())
-                            )
-                        }
-                    }
-                    
-                    Box(
-                        modifier = Modifier
-                            .size(10.dp)
-                            .clip(RoundedCornerShape(5.dp))
-                            .background(
-                                when (serviceStatus) {
-                                    Status.Started -> ServiceRunning
-                                    Status.Starting -> WarningOrange
-                                    Status.Stopping -> ServiceError
-                                    else -> ServiceStopped
-                                }
-                            )
-                    )
-                }
-
-                // Status text
-                StatusItem(
-                    text = when (serviceStatus) {
-                        Status.Starting -> stringResource(R.string.status_starting)
-                        Status.Started -> stringResource(R.string.status_started)
-                        Status.Stopping -> stringResource(R.string.status_stopping)
-                        else -> ""
-                    },
-                    modifier = Modifier.weight(1f),
-                )
-
-                // Connections button
                 Row(
-                    modifier =
-                    Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f))
-                        .clickable(onClick = onConnectionsClick)
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 18.dp, vertical = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text(
-                        text = connectionsCount.toString(),
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSecondaryContainer,
+                    // 状态指示灯（带呼吸效果）
+                    StatusIndicator(
+                        status = serviceStatus,
+                        breatheAlpha = breatheAlpha,
+                        breatheScale = breatheScale,
+                        modifier = Modifier.padding(start = 2.dp)
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Icon(
-                        imageVector = Icons.Outlined.Cable,
+
+                    // 状态文本
+                    StatusLabel(
+                        status = serviceStatus,
+                        modifier = Modifier.weight(1f),
+                    )
+
+                    // 连接数按钮
+                    ActionChip(
+                        count = connectionsCount,
+                        icon = Icons.Outlined.Cable,
                         contentDescription = stringResource(R.string.title_connections),
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                        onClick = onConnectionsClick,
                     )
-                }
 
-                // Groups button
-                if (hasGroups) {
-                    Row(
-                        modifier =
-                        Modifier
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.7f))
-                            .clickable(onClick = onGroupsClick)
-                            .padding(horizontal = 10.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Text(
-                            text = groupsCount.toString(),
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSecondaryContainer,
-                        )
-                        Spacer(modifier = Modifier.width(4.dp))
-                        Icon(
-                            imageVector = Icons.Default.Folder,
+                    // 分组按钮
+                    if (hasGroups) {
+                        ActionChip(
+                            count = groupsCount,
+                            icon = Icons.Default.Folder,
                             contentDescription = stringResource(R.string.title_groups),
-                            modifier = Modifier.size(16.dp),
-                            tint = MaterialTheme.colorScheme.onSecondaryContainer,
+                            onClick = onGroupsClick,
                         )
                     }
-                }
 
-                // Stop button
-                Row(
-                    modifier =
-                    Modifier
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(MaterialTheme.colorScheme.primaryContainer)
-                        .clickable(onClick = onStopClick)
-                        .padding(horizontal = 10.dp, vertical = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center,
-                ) {
-                    if (startTime != null) {
-                        UptimeText(startTime = startTime)
-                        Spacer(modifier = Modifier.width(4.dp))
-                    }
-                    Icon(
-                        imageVector = Icons.Default.Stop,
-                        contentDescription = stringResource(R.string.stop),
-                        modifier = Modifier.size(18.dp),
-                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                    // 停止按钮
+                    StopButton(
+                        startTime = startTime,
+                        onClick = onStopClick,
                     )
                 }
             }
@@ -214,17 +179,141 @@ fun ServiceStatusBar(
     }
 }
 
+/**
+ * 状态指示灯组件 - 带呼吸动效
+ */
 @Composable
-private fun StatusItem(text: String, modifier: Modifier = Modifier) {
+private fun StatusIndicator(
+    status: Status,
+    breatheAlpha: Float,
+    breatheScale: Float,
+    modifier: Modifier = Modifier,
+) {
+    val statusColor = when (status) {
+        Status.Started -> ServiceRunning
+        Status.Starting -> WarningOrange
+        Status.Stopping -> ServiceError
+        else -> ServiceStopped
+    }
+    
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier.size(24.dp)
+    ) {
+        // 外层呼吸光晕（仅运行状态显示）
+        if (status == Status.Started) {
+            Box(
+                modifier = Modifier
+                    .size((10.dp.value * breatheScale).dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(statusColor.copy(alpha = 0.4f * (1f - breatheAlpha)))
+            )
+        }
+        
+        // 内层指示点
+        Box(
+            modifier = Modifier
+                .size(10.dp)
+                .clip(RoundedCornerShape(50))
+                .background(statusColor)
+        )
+    }
+}
+
+/**
+ * 状态标签组件
+ */
+@Composable
+private fun StatusLabel(
+    status: Status,
+    modifier: Modifier = Modifier,
+) {
     Text(
-        text = text,
+        text = when (status) {
+            Status.Starting -> stringResource(R.string.status_starting)
+            Status.Started -> stringResource(R.string.status_started)
+            Status.Stopping -> stringResource(R.string.status_stopping)
+            else -> ""
+        },
         style = MaterialTheme.typography.titleMedium,
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.SemiBold,
         color = MaterialTheme.colorScheme.onSurface,
         modifier = modifier,
     )
 }
 
+/**
+ * 操作芯片按钮
+ */
+@Composable
+private fun ActionChip(
+    count: Int,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
+        modifier = Modifier.height(36.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 0.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(5.dp),
+        ) {
+            Text(
+                text = count.toString(),
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                modifier = Modifier.size(16.dp),
+                tint = MaterialTheme.colorScheme.onSecondaryContainer,
+            )
+        }
+    }
+}
+
+/**
+ * 停止按钮组件
+ */
+@Composable
+private fun StopButton(
+    startTime: Long?,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.primaryContainer,
+        modifier = Modifier.height(36.dp),
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            if (startTime != null) {
+                UptimeText(startTime = startTime)
+            }
+            Icon(
+                imageVector = Icons.Default.Stop,
+                contentDescription = stringResource(R.string.stop),
+                modifier = Modifier.size(18.dp),
+                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+            )
+        }
+    }
+}
+
+/**
+ * 运行时间显示组件
+ */
 @Composable
 fun UptimeText(startTime: Long, modifier: Modifier = Modifier) {
     var currentTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
@@ -251,7 +340,7 @@ fun UptimeText(startTime: Long, modifier: Modifier = Modifier) {
     Text(
         text = formattedTime,
         style = MaterialTheme.typography.labelLarge,
-        fontWeight = FontWeight.Bold,
+        fontWeight = FontWeight.SemiBold,
         color = MaterialTheme.colorScheme.onPrimaryContainer,
         modifier = modifier,
     )
