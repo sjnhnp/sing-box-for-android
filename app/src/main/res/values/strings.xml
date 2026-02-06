@@ -399,6 +399,10 @@
     <!-- Search -->
     <string name="search_placeholder">Find in document</string>
 
+    <!-- Performance Warnings -->
+    <string name="large_file_warning_title">Large File</string>
+    <string name="large_file_warning_message">This file is %d KB. Editing large files may affect performance.</string>
+
     <!-- Content Descriptions (Accessibility) -->
     <string name="content_description_back">Back</string>
     <string name="content_description_scroll_to_bottom">Scroll to bottom</string>

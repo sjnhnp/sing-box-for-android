@@ -36,9 +36,19 @@ data class EditProfileContentUiState(
     val currentSearchIndex: Int = 0,
     val isReadOnly: Boolean = false, // Add read-only flag
     val profileName: String = "", // Add profile name
+    // Performance warnings
+    val showLargeFileWarning: Boolean = false,
+    val fileSizeBytes: Long = 0,
+    val isSearching: Boolean = false, // For async search indicator
 )
 
 class EditProfileContentViewModel(private val profileId: Long, initialProfileName: String = "", initialIsReadOnly: Boolean = false) : ViewModel() {
+    companion object {
+        // Performance thresholds
+        private const val LARGE_FILE_THRESHOLD_BYTES = 100_000L // 100KB
+        private const val MAX_UNDO_HISTORY_SIZE = 50
+    }
+
     private val _uiState =
         MutableStateFlow(
             EditProfileContentUiState(
@@ -51,6 +61,7 @@ class EditProfileContentViewModel(private val profileId: Long, initialProfileNam
     private var profile: Profile? = null
     private var editor: ManualScrollTextProcessor? = null
     private var configCheckJob: Job? = null
+    private var searchJob: Job? = null
 
     fun setEditor(textProcessor: ManualScrollTextProcessor, isReadOnly: Boolean = false) {
         val isNewEditor = editor != textProcessor
@@ -197,8 +208,13 @@ class EditProfileContentViewModel(private val profileId: Long, initialProfileNam
                         ?: throw IllegalArgumentException("Profile not found")
                 profile = loadedProfile
 
+                // Get file size for performance warning
+                val file = File(loadedProfile.typed.path)
+                val fileSize = file.length()
+                val isLargeFile = fileSize > LARGE_FILE_THRESHOLD_BYTES
+
                 // Just load the content, we already have profile metadata from Intent
-                val content = File(loadedProfile.typed.path).readText()
+                val content = file.readText()
 
                 withContext(Dispatchers.Main) {
                     editor?.let {
@@ -211,6 +227,8 @@ class EditProfileContentViewModel(private val profileId: Long, initialProfileNam
                             originalContent = content,
                             hasUnsavedChanges = false,
                             isLoading = false,
+                            fileSizeBytes = fileSize,
+                            showLargeFileWarning = isLargeFile,
                             // Keep profileName and isReadOnly from initial state - no need to update
                         )
                     }
@@ -339,6 +357,10 @@ class EditProfileContentViewModel(private val profileId: Long, initialProfileNam
         _uiState.update { it.copy(configurationError = null) }
     }
 
+    fun dismissLargeFileWarning() {
+        _uiState.update { it.copy(showLargeFileWarning = false) }
+    }
+
     fun toggleSearchBar() {
         _uiState.update {
             val newShowSearchBar = !it.showSearchBar
@@ -366,6 +388,9 @@ class EditProfileContentViewModel(private val profileId: Long, initialProfileNam
     }
 
     private fun performSearch(query: String) {
+        // Cancel previous search
+        searchJob?.cancel()
+
         editor?.let { textProcessor ->
             val text = textProcessor.text?.toString() ?: ""
             if (text.isEmpty() || query.isEmpty()) {
@@ -373,30 +398,63 @@ class EditProfileContentViewModel(private val profileId: Long, initialProfileNam
                     it.copy(
                         searchResultCount = 0,
                         currentSearchIndex = 0,
+                        isSearching = false,
                     )
                 }
                 return
             }
 
-            val matches = mutableListOf<Int>()
-            var index = text.indexOf(query, ignoreCase = true)
-            while (index != -1) {
-                matches.add(index)
-                index = text.indexOf(query, index + 1, ignoreCase = true)
-            }
+            // For large files, perform search asynchronously
+            val isLargeFile = text.length > LARGE_FILE_THRESHOLD_BYTES
+            if (isLargeFile) {
+                _uiState.update { it.copy(isSearching = true) }
+                searchJob = viewModelScope.launch(Dispatchers.Default) {
+                    val matches = mutableListOf<Int>()
+                    var index = text.indexOf(query, ignoreCase = true)
+                    while (index != -1) {
+                        matches.add(index)
+                        index = text.indexOf(query, index + 1, ignoreCase = true)
+                    }
 
-            _uiState.update {
-                it.copy(
-                    searchResultCount = matches.size,
-                    currentSearchIndex = if (matches.isNotEmpty()) 1 else 0,
-                )
-            }
+                    withContext(Dispatchers.Main) {
+                        _uiState.update {
+                            it.copy(
+                                searchResultCount = matches.size,
+                                currentSearchIndex = if (matches.isNotEmpty()) 1 else 0,
+                                isSearching = false,
+                            )
+                        }
 
-            // Highlight first match
-            if (matches.isNotEmpty()) {
-                val firstMatch = matches[0]
-                textProcessor.resumeAutoScroll()
-                textProcessor.setSelection(firstMatch, firstMatch + query.length)
+                        // Highlight first match
+                        if (matches.isNotEmpty()) {
+                            val firstMatch = matches[0]
+                            textProcessor.resumeAutoScroll()
+                            textProcessor.setSelection(firstMatch, firstMatch + query.length)
+                        }
+                    }
+                }
+            } else {
+                // For small files, search synchronously
+                val matches = mutableListOf<Int>()
+                var index = text.indexOf(query, ignoreCase = true)
+                while (index != -1) {
+                    matches.add(index)
+                    index = text.indexOf(query, index + 1, ignoreCase = true)
+                }
+
+                _uiState.update {
+                    it.copy(
+                        searchResultCount = matches.size,
+                        currentSearchIndex = if (matches.isNotEmpty()) 1 else 0,
+                    )
+                }
+
+                // Highlight first match
+                if (matches.isNotEmpty()) {
+                    val firstMatch = matches[0]
+                    textProcessor.resumeAutoScroll()
+                    textProcessor.setSelection(firstMatch, firstMatch + query.length)
+                }
             }
         }
     }
