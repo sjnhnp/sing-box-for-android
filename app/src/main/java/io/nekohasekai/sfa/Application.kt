@@ -26,8 +26,10 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import java.io.File
 import java.util.Locale
+import dagger.hilt.android.HiltAndroidApp
 import io.nekohasekai.sfa.Application as BoxApplication
 
+@HiltAndroidApp
 class Application : Application() {
     override fun attachBaseContext(base: Context?) {
         super.attachBaseContext(base)

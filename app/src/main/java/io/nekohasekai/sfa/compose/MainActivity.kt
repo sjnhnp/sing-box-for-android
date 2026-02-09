@@ -80,6 +80,7 @@ import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import dagger.hilt.android.AndroidEntryPoint
 import dev.jeziellago.compose.markdowntext.MarkdownText
 import io.nekohasekai.libbox.Libbox
 import io.nekohasekai.sfa.Application
@@ -105,6 +106,7 @@ import io.nekohasekai.sfa.compose.screen.configuration.ProfileImportHandler
 import io.nekohasekai.sfa.compose.screen.connections.ConnectionDetailsScreen
 import io.nekohasekai.sfa.compose.screen.connections.ConnectionsPage
 import io.nekohasekai.sfa.compose.screen.connections.ConnectionsViewModel
+import io.nekohasekai.sfa.compose.screen.dashboard.DashboardIntent
 import io.nekohasekai.sfa.compose.screen.dashboard.DashboardViewModel
 import io.nekohasekai.sfa.compose.screen.dashboard.GroupsCard
 import io.nekohasekai.sfa.compose.screen.dashboard.groups.GroupsViewModel
@@ -126,6 +128,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
+@AndroidEntryPoint
 class MainActivity :
     ComponentActivity(),
     ServiceConnection.Callback {
@@ -619,14 +622,8 @@ class MainActivity :
 
         val groupsViewModel: GroupsViewModel? =
             if (isGroupsRoute) {
-                viewModel(
-                    factory = object : ViewModelProvider.Factory {
-                        override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                            @Suppress("UNCHECKED_CAST")
-                            return GroupsViewModel(dashboardViewModel.commandClient) as T
-                        }
-                    },
-                )
+                // Hilt will inject the dependencies automatically
+                viewModel()
             } else {
                 null
             }
@@ -779,7 +776,7 @@ class MainActivity :
                         onGroupsClick = { showGroupsSheet = true },
                         connectionsCount = dashboardUiState.connectionsCount,
                         onConnectionsClick = { showConnectionsSheet = true },
-                        onStopClick = { dashboardViewModel.toggleService() },
+                        onStopClick = { dashboardViewModel.dispatch(DashboardIntent.ToggleService) },
                         modifier = Modifier.align(Alignment.BottomCenter),
                     )
                 }
@@ -812,7 +809,7 @@ class MainActivity :
                             ExtendedFloatingActionButton(
                                 onClick = {
                                     if (isRunning || isStopping) {
-                                        dashboardViewModel.toggleService()
+                                        dashboardViewModel.dispatch(DashboardIntent.ToggleService)
                                     } else {
                                         startService()
                                     }
@@ -1128,7 +1125,7 @@ class MainActivity :
         currentServiceStatus = status
         // Update service status in ViewModels
         if (::dashboardViewModel.isInitialized) {
-            dashboardViewModel.updateServiceStatus(status)
+            dashboardViewModel.dispatch(DashboardIntent.ServiceStatusChanged(status))
         }
     }
 

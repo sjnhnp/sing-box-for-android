@@ -22,6 +22,8 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.util.concurrent.atomic.AtomicLong
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 
 data class ConnectionsUiState(
     val connections: List<Connection> = emptyList(),
@@ -38,14 +40,19 @@ sealed class ConnectionsEvent : ScreenEvent {
     data object AllConnectionsClosed : ConnectionsEvent()
 }
 
-class ConnectionsViewModel :
+
+
+@HiltViewModel
+class ConnectionsViewModel @Inject constructor(
+    private val commandClient: CommandClient
+) :
     BaseViewModel<ConnectionsUiState, ConnectionsEvent>(),
     CommandClient.Handler {
-    private val commandClient = CommandClient(
-        viewModelScope,
-        CommandClient.ConnectionType.Connections,
-        this,
-    )
+    
+    init {
+        commandClient.setTypes(listOf(CommandClient.ConnectionType.Connections))
+        commandClient.addHandler(this)
+    }
 
     private val _serviceStatus = MutableStateFlow(Status.Stopped)
     val serviceStatus = _serviceStatus.asStateFlow()

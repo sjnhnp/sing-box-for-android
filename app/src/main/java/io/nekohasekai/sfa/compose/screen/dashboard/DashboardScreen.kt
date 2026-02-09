@@ -31,6 +31,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.nekohasekai.sfa.R
 import io.nekohasekai.sfa.compose.base.UiEvent
+import io.nekohasekai.sfa.compose.screen.dashboard.DashboardIntent
 import io.nekohasekai.sfa.compose.navigation.NewProfileArgs
 import io.nekohasekai.sfa.compose.topbar.OverrideTopBar
 import io.nekohasekai.sfa.constant.Status
@@ -53,7 +54,7 @@ fun DashboardScreen(
         TopAppBar(
             title = { Text(stringResource(R.string.title_dashboard)) },
             actions = {
-                IconButton(onClick = { viewModel.toggleCardSettingsDialog() }) {
+                IconButton(onClick = { viewModel.dispatch(DashboardIntent.ToggleCardSettingsDialog) }) {
                     Icon(
                         imageVector = Icons.Default.MoreVert,
                         contentDescription = stringResource(R.string.title_others),
@@ -65,7 +66,7 @@ fun DashboardScreen(
 
     // Update service status in ViewModel
     LaunchedEffect(serviceStatus) {
-        viewModel.updateServiceStatus(serviceStatus)
+        viewModel.dispatch(DashboardIntent.ServiceStatusChanged(serviceStatus))
     }
 
     // Events are now handled globally in ComposeActivity via GlobalEventBus
@@ -78,7 +79,7 @@ fun DashboardScreen(
             title = { Text(stringResource(R.string.error_deprecated_warning)) },
             text = { Text(note.message) },
             confirmButton = {
-                TextButton(onClick = { viewModel.dismissDeprecatedNote() }) {
+                TextButton(onClick = { viewModel.dispatch(DashboardIntent.DismissDeprecatedNote) }) {
                     Text(stringResource(R.string.ok))
                 }
             },
@@ -87,7 +88,7 @@ fun DashboardScreen(
                 {
                     TextButton(onClick = {
                         viewModel.sendGlobalEvent(UiEvent.OpenUrl(note.migrationLink))
-                        viewModel.dismissDeprecatedNote()
+                        viewModel.dispatch(DashboardIntent.DismissDeprecatedNote)
                     }) {
                         Text(stringResource(R.string.error_deprecated_documentation))
                     }
@@ -108,13 +109,13 @@ fun DashboardScreen(
             sheetState = sheetState,
             visibleCards = uiState.visibleCards,
             cardOrder = uiState.cardOrder,
-            onToggleCard = viewModel::toggleCardVisibility,
-            onReorderCards = viewModel::reorderCards,
-            onResetOrder = viewModel::resetCardOrder,
+            onToggleCard = { viewModel.dispatch(DashboardIntent.ToggleCardVisibility(it)) },
+            onReorderCards = { viewModel.dispatch(DashboardIntent.ReorderCards(it)) },
+            onResetOrder = { viewModel.dispatch(DashboardIntent.ResetCardOrder) },
             onDismiss = {
                 scope.launch {
                     sheetState.hide()
-                    viewModel.closeCardSettingsDialog()
+                    viewModel.dispatch(DashboardIntent.CloseCardSettingsDialog)
                 }
             },
         )
@@ -171,8 +172,8 @@ fun DashboardScreen(
                                 uiState.cardWidths[cardGroup]
                                     ?: CardWidth.Full,
                                 uiState = uiState,
-                                onClashModeSelected = viewModel::selectClashMode,
-                                onSystemProxyToggle = viewModel::toggleSystemProxy,
+                                onClashModeSelected = { viewModel.dispatch(DashboardIntent.SelectClashMode(it)) },
+                                onSystemProxyToggle = { viewModel.dispatch(DashboardIntent.ToggleSystemProxy(it)) },
                                 // Profile card specific props
                                 profiles = uiState.profiles,
                                 selectedProfileId = uiState.selectedProfileId,
@@ -181,17 +182,17 @@ fun DashboardScreen(
                                 showProfilePickerSheet = uiState.showProfilePickerSheet,
                                 updatingProfileId = uiState.updatingProfileId,
                                 updatedProfileId = uiState.updatedProfileId,
-                                onProfileSelected = viewModel::selectProfile,
-                                onProfileEdit = viewModel::editProfile,
-                                onProfileDelete = viewModel::deleteProfile,
-                                onProfileShare = viewModel::shareProfile,
-                                onProfileShareURL = viewModel::shareProfileURL,
-                                onProfileUpdate = viewModel::updateProfile,
-                                onProfileMove = viewModel::moveProfile,
-                                onShowAddProfileSheet = viewModel::showAddProfileSheet,
-                                onHideAddProfileSheet = viewModel::hideAddProfileSheet,
-                                onShowProfilePickerSheet = viewModel::showProfilePickerSheet,
-                                onHideProfilePickerSheet = viewModel::hideProfilePickerSheet,
+                                onProfileSelected = { viewModel.dispatch(DashboardIntent.SelectProfile(it)) },
+                                onProfileEdit = { viewModel.dispatch(DashboardIntent.EditProfile(it)) },
+                                onProfileDelete = { viewModel.dispatch(DashboardIntent.DeleteProfile(it)) },
+                                onProfileShare = { },
+                                onProfileShareURL = { },
+                                onProfileUpdate = { viewModel.dispatch(DashboardIntent.UpdateProfile(it)) },
+                                onProfileMove = { from, to -> viewModel.dispatch(DashboardIntent.MoveProfile(from, to)) },
+                                onShowAddProfileSheet = { viewModel.dispatch(DashboardIntent.ShowAddProfileSheet) },
+                                onHideAddProfileSheet = { viewModel.dispatch(DashboardIntent.HideAddProfileSheet) },
+                                onShowProfilePickerSheet = { viewModel.dispatch(DashboardIntent.ShowProfilePickerSheet) },
+                                onHideProfilePickerSheet = { viewModel.dispatch(DashboardIntent.HideProfilePickerSheet) },
                                 onOpenNewProfile = onOpenNewProfile,
                                 commandClient = viewModel.commandClient,
                                 modifier =
@@ -211,8 +212,8 @@ fun DashboardScreen(
                                 ?: CardWidth.Full,
                             uiState = uiState,
                             serviceStatus = serviceStatus,
-                            onClashModeSelected = viewModel::selectClashMode,
-                            onSystemProxyToggle = viewModel::toggleSystemProxy,
+                            onClashModeSelected = { viewModel.dispatch(DashboardIntent.SelectClashMode(it)) },
+                            onSystemProxyToggle = { viewModel.dispatch(DashboardIntent.ToggleSystemProxy(it)) },
                             // Profile card specific props
                             profiles = uiState.profiles,
                             selectedProfileId = uiState.selectedProfileId,
@@ -221,17 +222,17 @@ fun DashboardScreen(
                             showProfilePickerSheet = uiState.showProfilePickerSheet,
                             updatingProfileId = uiState.updatingProfileId,
                             updatedProfileId = uiState.updatedProfileId,
-                            onProfileSelected = viewModel::selectProfile,
-                            onProfileEdit = viewModel::editProfile,
-                            onProfileDelete = viewModel::deleteProfile,
-                            onProfileShare = viewModel::shareProfile,
-                            onProfileShareURL = viewModel::shareProfileURL,
-                            onProfileUpdate = viewModel::updateProfile,
-                            onProfileMove = viewModel::moveProfile,
-                            onShowAddProfileSheet = viewModel::showAddProfileSheet,
-                            onHideAddProfileSheet = viewModel::hideAddProfileSheet,
-                            onShowProfilePickerSheet = viewModel::showProfilePickerSheet,
-                            onHideProfilePickerSheet = viewModel::hideProfilePickerSheet,
+                            onProfileSelected = { viewModel.dispatch(DashboardIntent.SelectProfile(it)) },
+                            onProfileEdit = { viewModel.dispatch(DashboardIntent.EditProfile(it)) },
+                            onProfileDelete = { viewModel.dispatch(DashboardIntent.DeleteProfile(it)) },
+                            onProfileShare = { },
+                            onProfileShareURL = { },
+                            onProfileUpdate = { viewModel.dispatch(DashboardIntent.UpdateProfile(it)) },
+                            onProfileMove = { from, to -> viewModel.dispatch(DashboardIntent.MoveProfile(from, to)) },
+                            onShowAddProfileSheet = { viewModel.dispatch(DashboardIntent.ShowAddProfileSheet) },
+                            onHideAddProfileSheet = { viewModel.dispatch(DashboardIntent.HideAddProfileSheet) },
+                            onShowProfilePickerSheet = { viewModel.dispatch(DashboardIntent.ShowProfilePickerSheet) },
+                            onHideProfilePickerSheet = { viewModel.dispatch(DashboardIntent.HideProfilePickerSheet) },
                             onOpenNewProfile = onOpenNewProfile,
                             commandClient = viewModel.commandClient,
                         )

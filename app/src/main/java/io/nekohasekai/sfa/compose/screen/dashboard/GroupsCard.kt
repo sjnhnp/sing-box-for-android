@@ -76,26 +76,19 @@ import io.nekohasekai.sfa.compose.util.rememberSheetDismissFromContentOnlyIfGest
 import io.nekohasekai.sfa.constant.Status
 import io.nekohasekai.sfa.utils.CommandClient
 
+import androidx.hilt.navigation.compose.hiltViewModel
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GroupsCard(
     serviceStatus: Status,
-    commandClient: CommandClient? = null,
-    viewModel: GroupsViewModel? = null,
+    viewModel: GroupsViewModel = hiltViewModel(),
     showTopBar: Boolean = false,
     listHeaderContent: (@Composable () -> Unit)? = null,
     asSheet: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
-    val actualViewModel: GroupsViewModel = viewModel ?: viewModel(
-        factory =
-        object : ViewModelProvider.Factory {
-            override fun <T : androidx.lifecycle.ViewModel> create(modelClass: Class<T>): T {
-                @Suppress("UNCHECKED_CAST")
-                return GroupsViewModel(commandClient) as T
-            }
-        },
-    )
+    val actualViewModel: GroupsViewModel = viewModel
     val snackbarHostState = remember { SnackbarHostState() }
     val uiState by actualViewModel.uiState.collectAsState()
 

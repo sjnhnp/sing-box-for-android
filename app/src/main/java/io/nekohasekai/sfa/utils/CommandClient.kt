@@ -16,19 +16,36 @@ import io.nekohasekai.libbox.StringIterator
 import io.nekohasekai.sfa.ktx.toList
 import kotlinx.coroutines.CoroutineScope
 
-open class CommandClient(
-    private val scope: CoroutineScope,
-    private val connectionTypes: List<ConnectionType>,
-    private val handler: Handler,
-) {
-    constructor(
-        scope: CoroutineScope,
-        connectionType: ConnectionType,
-        handler: Handler,
-    ) : this(scope, listOf(connectionType), handler)
+import io.nekohasekai.sfa.di.ApplicationScope
+import javax.inject.Inject
+import javax.inject.Singleton
 
+@Singleton
+open class CommandClient @Inject constructor(
+    @ApplicationScope private val scope: CoroutineScope,
+) {
+    // Secondary constructor for manual management or legacy code
+    constructor(scope: CoroutineScope, connectionType: ConnectionType, handler: Handler) : this(scope) {
+        this.connectionTypes.add(connectionType)
+        this.addHandler(handler)
+    }
+
+    constructor(scope: CoroutineScope, connectionTypes: List<ConnectionType>, handler: Handler) : this(scope) {
+        this.connectionTypes.addAll(connectionTypes)
+        this.addHandler(handler)
+    }
+
+    private val connectionTypes = mutableListOf<ConnectionType>()
+    private val handler: Handler = object : Handler {} // No-op handler by default
+    
     private val additionalHandlers = mutableListOf<Handler>()
     private var cachedGroups: MutableList<OutboundGroup>? = null
+
+    // For backward compatibility (if needed) but we will fix usages
+    fun setTypes(types: List<ConnectionType>) {
+        connectionTypes.clear()
+        connectionTypes.addAll(types)
+    }
 
     fun addHandler(handler: Handler) {
         synchronized(additionalHandlers) {

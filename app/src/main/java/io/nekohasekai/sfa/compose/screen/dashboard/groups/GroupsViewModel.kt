@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 
 data class GroupsUiState(
     val groups: List<Group> = emptyList(),
@@ -28,47 +30,27 @@ sealed class GroupsEvent : ScreenEvent {
     data class GroupSelected(val groupTag: String, val itemTag: String) : GroupsEvent()
 }
 
-class GroupsViewModel(private val sharedCommandClient: CommandClient? = null) :
-    BaseViewModel<GroupsUiState, GroupsEvent>(),
-    CommandClient.Handler {
+
+@HiltViewModel
+class GroupsViewModel @Inject constructor(
     private val commandClient: CommandClient
-    private val isUsingSharedClient: Boolean
+) : BaseViewModel<GroupsUiState, GroupsEvent>(),
+    CommandClient.Handler {
 
     private val _serviceStatus = MutableStateFlow(Status.Stopped)
     val serviceStatus = _serviceStatus.asStateFlow()
     private var lastServiceStatus: Status = Status.Stopped
 
     init {
-        if (sharedCommandClient != null) {
-            commandClient = sharedCommandClient
-            isUsingSharedClient = true
-            commandClient.addHandler(this)
-        } else {
-            commandClient =
-                CommandClient(
-                    viewModelScope,
-                    CommandClient.ConnectionType.Groups,
-                    this,
-                )
-            isUsingSharedClient = false
-        }
-
+        commandClient.addHandler(this)
+        
         viewModelScope.launch {
             AppLifecycleObserver.isForeground.collect { foreground ->
                 if (lastServiceStatus != Status.Started) return@collect
                 if (foreground) {
-                    if (isUsingSharedClient) {
-                        commandClient.addHandler(this@GroupsViewModel)
-                    } else {
-                        updateState { copy(isLoading = true) }
-                        commandClient.connect()
-                    }
+                    commandClient.addHandler(this@GroupsViewModel)
                 } else {
-                    if (isUsingSharedClient) {
-                        commandClient.removeHandler(this@GroupsViewModel)
-                    } else {
-                        commandClient.disconnect()
-                    }
+                    commandClient.removeHandler(this@GroupsViewModel)
                 }
             }
         }
@@ -78,23 +60,14 @@ class GroupsViewModel(private val sharedCommandClient: CommandClient? = null) :
 
     override fun onCleared() {
         super.onCleared()
-        if (isUsingSharedClient) {
-            commandClient.removeHandler(this)
-        } else {
-            commandClient.disconnect()
-        }
+        commandClient.removeHandler(this)
     }
 
     private fun handleServiceStatusChange(status: Status) {
         if (status == Status.Started) {
-            if (!isUsingSharedClient && AppLifecycleObserver.isForeground.value) {
-                updateState { copy(isLoading = true) }
-                commandClient.connect()
-            }
+            commandClient.addHandler(this)
         } else {
-            if (!isUsingSharedClient) {
-                commandClient.disconnect()
-            }
+            commandClient.removeHandler(this)
             updateState {
                 copy(
                     groups = emptyList(),

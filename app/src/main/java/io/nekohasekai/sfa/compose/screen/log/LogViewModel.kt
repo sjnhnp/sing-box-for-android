@@ -12,8 +12,13 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.LinkedList
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 
-class LogViewModel :
+@HiltViewModel
+class LogViewModel @Inject constructor(
+    private val commandClient: CommandClient
+) :
     BaseLogViewModel(),
     CommandClient.Handler {
     companion object {
@@ -21,15 +26,12 @@ class LogViewModel :
     }
 
     private val bufferedLogs = LinkedList<ProcessedLogEntry>()
-    private val commandClient =
-        CommandClient(
-            scope = viewModelScope,
-            connectionType = CommandClient.ConnectionType.Log,
-            handler = this,
-        )
     private var lastServiceStatus: Status = Status.Stopped
-
+    
     init {
+        commandClient.setTypes(listOf(CommandClient.ConnectionType.Log))
+        commandClient.addHandler(this)
+
         viewModelScope.launch {
             AppLifecycleObserver.isForeground.collect { foreground ->
                 if (lastServiceStatus != Status.Started) return@collect

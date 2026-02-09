@@ -16,6 +16,7 @@ plugins {
     id("org.jetbrains.kotlin.plugin.serialization")
     id("com.github.triplet.play")
     alias(libs.plugins.spotless)
+    id("com.google.dagger.hilt.android")
 }
 
 fun getProps(propName: String): String {
@@ -208,6 +209,10 @@ dependencies {
     }
     implementation("com.google.guava:guava:33.5.0-android")
 
+    // Hilt
+    implementation("com.google.dagger:hilt-android:2.55")
+    ksp("com.google.dagger:hilt-android-compiler:2.55")
+
     // API 23+ dependencies (play/other)
     "playImplementation"("androidx.lifecycle:lifecycle-livedata-ktx:$lifecycleVersion23")
     "playImplementation"("androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion23")
@@ -279,6 +284,7 @@ dependencies {
     "playImplementation"("androidx.navigation:navigation-compose:2.9.6")
     "playImplementation"("androidx.lifecycle:lifecycle-viewmodel-compose:$lifecycleComposeVersion23")
     "playImplementation"("androidx.compose.runtime:runtime-livedata")
+    "playImplementation"("androidx.hilt:hilt-navigation-compose:1.2.0")
 
     "otherImplementation"(composeBom23)
     "otherImplementation"("androidx.compose.material3:material3")
@@ -290,6 +296,7 @@ dependencies {
     "otherImplementation"("androidx.navigation:navigation-compose:2.9.6")
     "otherImplementation"("androidx.lifecycle:lifecycle-viewmodel-compose:$lifecycleComposeVersion23")
     "otherImplementation"("androidx.compose.runtime:runtime-livedata")
+    "otherImplementation"("androidx.hilt:hilt-navigation-compose:1.2.0")
 
     // Compose dependencies - API 21 (otherLegacy)
     val composeBom21 = platform("androidx.compose:compose-bom:2025.01.00")

@@ -27,6 +27,8 @@ import org.json.JSONException
 import java.io.File
 import java.util.Collections
 import java.util.Date
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
 
 enum class CardGroup {
     ClashMode,
@@ -120,22 +122,37 @@ data class DashboardUiState(
 // DashboardViewModel now only uses UiEvent for all events
 // No need for DashboardEvent anymore as all events are handled globally
 
-class DashboardViewModel :
-    BaseViewModel<DashboardUiState, UiEvent>(),
+@HiltViewModel
+class DashboardViewModel @Inject constructor(
+    internal val commandClient: CommandClient,
+) : BaseViewModel<DashboardUiState, UiEvent>(),
     CommandClient.Handler {
     private val _serviceStatus = MutableStateFlow(Status.Stopped)
     val serviceStatus: StateFlow<Status> = _serviceStatus.asStateFlow()
 
-    internal val commandClient =
-        CommandClient(
-            viewModelScope,
-            listOf(
-                CommandClient.ConnectionType.Status,
-                CommandClient.ConnectionType.ClashMode,
-                CommandClient.ConnectionType.Groups,
-            ),
-            this,
-        )
+    fun dispatch(intent: DashboardIntent) {
+        when (intent) {
+            is DashboardIntent.ToggleService -> toggleService()
+            is DashboardIntent.SelectProfile -> selectProfile(intent.id)
+            is DashboardIntent.EditProfile -> editProfile(intent.profile)
+            is DashboardIntent.DeleteProfile -> deleteProfile(intent.profile)
+            is DashboardIntent.UpdateProfile -> updateProfile(intent.profile)
+            is DashboardIntent.MoveProfile -> moveProfile(intent.from, intent.to)
+            is DashboardIntent.DismissDeprecatedNote -> dismissDeprecatedNote()
+            is DashboardIntent.ToggleCardVisibility -> toggleCardVisibility(intent.cardGroup)
+            is DashboardIntent.ReorderCards -> reorderCards(intent.newOrder)
+            is DashboardIntent.ResetCardOrder -> resetCardOrder()
+            is DashboardIntent.ToggleCardSettingsDialog -> toggleCardSettingsDialog()
+            is DashboardIntent.CloseCardSettingsDialog -> closeCardSettingsDialog()
+            is DashboardIntent.ToggleSystemProxy -> toggleSystemProxy(intent.enabled)
+            is DashboardIntent.SelectClashMode -> selectClashMode(intent.mode)
+            is DashboardIntent.ShowAddProfileSheet -> showAddProfileSheet()
+            is DashboardIntent.HideAddProfileSheet -> hideAddProfileSheet()
+            is DashboardIntent.ShowProfilePickerSheet -> showProfilePickerSheet()
+            is DashboardIntent.HideProfilePickerSheet -> hideProfilePickerSheet()
+            is DashboardIntent.ServiceStatusChanged -> updateServiceStatus(intent.status)
+        }
+    }
 
     override fun createInitialState(): DashboardUiState {
         val savedOrder = loadItemOrder()
@@ -155,6 +172,15 @@ class DashboardViewModel :
         loadProfiles()
         ProfileManager.registerCallback(::onProfilesChanged)
 
+        commandClient.setTypes(
+            listOf(
+                CommandClient.ConnectionType.Status,
+                CommandClient.ConnectionType.ClashMode,
+                CommandClient.ConnectionType.Groups,
+            )
+        )
+        commandClient.addHandler(this)
+
         viewModelScope.launch {
             AppLifecycleObserver.isForeground.collect { foreground ->
                 if (_serviceStatus.value != Status.Started) return@collect
@@ -170,7 +196,7 @@ class DashboardViewModel :
     override fun onCleared() {
         super.onCleared()
         ProfileManager.unregisterCallback(::onProfilesChanged)
-        commandClient.disconnect()
+        commandClient.removeHandler(this)
     }
 
     private fun onProfilesChanged() {
@@ -233,7 +259,7 @@ class DashboardViewModel :
         }
     }
 
-    fun toggleService() {
+    private fun toggleService() {
         when (currentState.serviceStatus) {
             Status.Starting, Status.Started -> stopService()
             Status.Stopped -> sendGlobalEvent(UiEvent.RequestStartService)
@@ -252,7 +278,7 @@ class DashboardViewModel :
         }
     }
 
-    fun dismissDeprecatedNote() {
+    private fun dismissDeprecatedNote() {
         val notes = currentState.deprecatedNotes
         if (notes.isNotEmpty()) {
             updateState {
@@ -264,7 +290,7 @@ class DashboardViewModel :
         }
     }
 
-    fun selectProfile(profileId: Long) {
+    private fun selectProfile(profileId: Long) {
         if (currentState.isLoading) return
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -305,11 +331,11 @@ class DashboardViewModel :
         }
     }
 
-    fun editProfile(profile: Profile) {
+    private fun editProfile(profile: Profile) {
         sendGlobalEvent(UiEvent.EditProfile(profile.id))
     }
 
-    fun deleteProfile(profile: Profile) {
+    private fun deleteProfile(profile: Profile) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 // Update UI immediately for responsiveness
@@ -330,15 +356,7 @@ class DashboardViewModel :
         }
     }
 
-    fun shareProfile(profile: Profile) {
-        // Handled directly in ProfilesCard
-    }
-
-    fun shareProfileURL(profile: Profile) {
-        // Handled directly in ProfilesCard
-    }
-
-    fun updateProfile(profile: Profile) {
+    private fun updateProfile(profile: Profile) {
         if (profile.typed.type != TypedProfile.Type.Remote) return
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -394,7 +412,7 @@ class DashboardViewModel :
         }
     }
 
-    fun moveProfile(from: Int, to: Int) {
+    private fun moveProfile(from: Int, to: Int) {
         val currentProfiles = currentState.profiles.toMutableList()
 
         if (from < to) {
@@ -419,23 +437,23 @@ class DashboardViewModel :
         }
     }
 
-    fun showAddProfileSheet() {
+    private fun showAddProfileSheet() {
         updateState { copy(showAddProfileSheet = true) }
     }
 
-    fun hideAddProfileSheet() {
+    private fun hideAddProfileSheet() {
         updateState { copy(showAddProfileSheet = false) }
     }
 
-    fun showProfilePickerSheet() {
+    private fun showProfilePickerSheet() {
         updateState { copy(showProfilePickerSheet = true) }
     }
 
-    fun hideProfilePickerSheet() {
+    private fun hideProfilePickerSheet() {
         updateState { copy(showProfilePickerSheet = false) }
     }
 
-    fun updateServiceStatus(status: Status) {
+    private fun updateServiceStatus(status: Status) {
         viewModelScope.launch {
             _serviceStatus.emit(status)
             updateState {
@@ -520,7 +538,7 @@ class DashboardViewModel :
         }
     }
 
-    fun toggleSystemProxy(enabled: Boolean) {
+    private fun toggleSystemProxy(enabled: Boolean) {
         if (currentState.systemProxySwitching) return
 
         viewModelScope.launch(Dispatchers.IO) {
@@ -544,7 +562,7 @@ class DashboardViewModel :
         }
     }
 
-    fun selectClashMode(mode: String) {
+    private fun selectClashMode(mode: String) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
                 Libbox.newStandaloneCommandClient().setClashMode(mode)
@@ -639,13 +657,13 @@ class DashboardViewModel :
         }
     }
 
-    fun toggleCardSettingsDialog() {
+    private fun toggleCardSettingsDialog() {
         updateState {
             copy(showCardSettingsDialog = !showCardSettingsDialog)
         }
     }
 
-    fun toggleCardVisibility(cardGroup: CardGroup) {
+    private fun toggleCardVisibility(cardGroup: CardGroup) {
         // Profiles card cannot be disabled
         if (cardGroup == CardGroup.Profiles) {
             return
@@ -668,20 +686,20 @@ class DashboardViewModel :
         }
     }
 
-    fun closeCardSettingsDialog() {
+    private fun closeCardSettingsDialog() {
         updateState {
             copy(showCardSettingsDialog = false)
         }
     }
 
-    fun reorderCards(newOrder: List<CardGroup>) {
+    private fun reorderCards(newOrder: List<CardGroup>) {
         updateState {
             saveItemOrder(newOrder)
             copy(cardOrder = newOrder)
         }
     }
 
-    fun resetCardOrder() {
+    private fun resetCardOrder() {
         // Clear saved settings to restore defaults
         Settings.dashboardItemOrder = ""
         Settings.dashboardDisabledItems = emptySet()
