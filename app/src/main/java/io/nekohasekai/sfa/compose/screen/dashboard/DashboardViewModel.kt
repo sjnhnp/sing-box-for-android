@@ -22,14 +22,17 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import org.json.JSONArray
-import org.json.JSONException
 import java.io.File
 import java.util.Collections
 import java.util.Date
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+
+@Serializable
 enum class CardGroup {
     ClashMode,
     UploadTraffic,
@@ -40,6 +43,7 @@ enum class CardGroup {
     Profiles,
 }
 
+@Serializable
 enum class CardWidth {
     Half,
     Full,
@@ -580,80 +584,68 @@ class DashboardViewModel @Inject constructor(
 
     // CommandClient.Handler implementation
     override fun onConnected() {
-        viewModelScope.launch(Dispatchers.Main) {
-            updateState { copy(isStatusVisible = true) }
-        }
+        updateState { copy(isStatusVisible = true) }
     }
 
     override fun onDisconnected() {
-        viewModelScope.launch(Dispatchers.Main) {
-            updateState {
-                copy(
-                    memory = "",
-                    goroutines = "",
-                    isStatusVisible = false,
-                )
-            }
+        updateState {
+            copy(
+                memory = "",
+                goroutines = "",
+                isStatusVisible = false,
+            )
         }
     }
 
     override fun updateStatus(status: StatusMessage) {
-        viewModelScope.launch(Dispatchers.Main) {
-            updateState {
-                // Update history by adding new values and removing old ones
-                val newUplinkHistory = (uplinkHistory.drop(1) + status.uplink.toFloat())
-                val newDownlinkHistory = (downlinkHistory.drop(1) + status.downlink.toFloat())
+        updateState {
+            // Update history by adding new values and removing old ones
+            val newUplinkHistory = (uplinkHistory.drop(1) + status.uplink.toFloat())
+            val newDownlinkHistory = (downlinkHistory.drop(1) + status.downlink.toFloat())
 
-                // Format the total values
-                val newUplinkTotal = Libbox.formatBytes(status.uplinkTotal)
-                val newDownlinkTotal = Libbox.formatBytes(status.downlinkTotal)
+            // Format the total values
+            val newUplinkTotal = Libbox.formatBytes(status.uplinkTotal)
+            val newDownlinkTotal = Libbox.formatBytes(status.downlinkTotal)
 
-                copy(
-                    memory = Libbox.formatBytes(status.memory),
-                    goroutines = status.goroutines.toString(),
-                    // Only set trafficVisible to true, never back to false from status updates
-                    trafficVisible = if (status.trafficAvailable) true else trafficVisible,
-                    connectionsCount = status.connectionsIn,
-                    connectionsIn = status.connectionsIn.toString(),
-                    connectionsOut = status.connectionsOut.toString(),
-                    uplink = "${Libbox.formatBytes(status.uplink)}/s",
-                    downlink = "${Libbox.formatBytes(status.downlink)}/s",
-                    // Only update total values if they've actually changed
-                    uplinkTotal = if (newUplinkTotal != uplinkTotal) newUplinkTotal else uplinkTotal,
-                    downlinkTotal = if (newDownlinkTotal != downlinkTotal) newDownlinkTotal else downlinkTotal,
-                    uplinkHistory = newUplinkHistory,
-                    downlinkHistory = newDownlinkHistory,
-                )
-            }
+            copy(
+                memory = Libbox.formatBytes(status.memory),
+                goroutines = status.goroutines.toString(),
+                // Only set trafficVisible to true, never back to false from status updates
+                trafficVisible = if (status.trafficAvailable) true else trafficVisible,
+                connectionsCount = status.connectionsIn,
+                connectionsIn = status.connectionsIn.toString(),
+                connectionsOut = status.connectionsOut.toString(),
+                uplink = "${Libbox.formatBytes(status.uplink)}/s",
+                downlink = "${Libbox.formatBytes(status.downlink)}/s",
+                // Only update total values if they've actually changed
+                uplinkTotal = if (newUplinkTotal != uplinkTotal) newUplinkTotal else uplinkTotal,
+                downlinkTotal = if (newDownlinkTotal != downlinkTotal) newDownlinkTotal else downlinkTotal,
+                uplinkHistory = newUplinkHistory,
+                downlinkHistory = newDownlinkHistory,
+            )
         }
     }
 
     override fun initializeClashMode(modeList: List<String>, currentMode: String) {
-        viewModelScope.launch(Dispatchers.Main) {
-            updateState {
-                copy(
-                    clashModeVisible = modeList.size > 1,
-                    clashModes = modeList,
-                    selectedClashMode = currentMode,
-                )
-            }
+        updateState {
+            copy(
+                clashModeVisible = modeList.size > 1,
+                clashModes = modeList,
+                selectedClashMode = currentMode,
+            )
         }
     }
 
     override fun updateClashMode(newMode: String) {
-        viewModelScope.launch(Dispatchers.Main) {
-            updateState {
-                copy(selectedClashMode = newMode)
-            }
+        updateState {
+            copy(selectedClashMode = newMode)
         }
     }
 
     override fun updateGroups(newGroups: MutableList<OutboundGroup>) {
-        viewModelScope.launch(Dispatchers.Main) {
-            val hasGroups = newGroups.isNotEmpty()
-            updateState {
-                copy(hasGroups = hasGroups, groupsCount = newGroups.size)
-            }
+        val hasGroups = newGroups.isNotEmpty()
+        updateState {
+            copy(hasGroups = hasGroups, groupsCount = newGroups.size)
         }
     }
 
@@ -730,40 +722,35 @@ class DashboardViewModel @Inject constructor(
         }
 
         return try {
-            val jsonArray = JSONArray(savedOrder)
-            val order = mutableListOf<CardGroup>()
-
-            for (i in 0 until jsonArray.length()) {
-                val itemName = jsonArray.getString(i)
-                stringToCardGroup(itemName)?.let { order.add(it) }
-            }
+            val order = Json.decodeFromString<List<CardGroup>>(savedOrder)
+            val orderMutable = order.toMutableList()
 
             // Add any new items that aren't in the saved order
             val allItems = CardGroup.values().toSet()
             val savedItems = order.toSet()
             val newItems = allItems - savedItems
 
-            order.addAll(newItems)
-            order
-        } catch (e: JSONException) {
+            orderMutable.addAll(newItems)
+            orderMutable
+        } catch (e: Exception) {
             getDefaultItemOrder()
         }
     }
 
     private fun saveItemOrder(order: List<CardGroup>) {
-        val jsonArray = JSONArray()
-        order.forEach { item ->
-            jsonArray.put(cardGroupToString(item))
-        }
-        Settings.dashboardItemOrder = jsonArray.toString()
+        Settings.dashboardItemOrder = Json.encodeToString(order)
     }
 
     private fun loadDisabledItems(): Set<CardGroup> {
         val savedDisabled = Settings.dashboardDisabledItems
         // Filter out Profiles from disabled items (it cannot be disabled)
-        return savedDisabled.mapNotNull { stringToCardGroup(it) }
-            .filter { it != CardGroup.Profiles }
-            .toSet()
+        return savedDisabled.mapNotNull { name ->
+            try {
+                CardGroup.valueOf(name)
+            } catch (e: IllegalArgumentException) {
+                null
+            }
+        }.filter { it != CardGroup.Profiles }.toSet()
     }
 
     private fun saveDisabledItems(visibleCards: Set<CardGroup>) {
@@ -771,14 +758,6 @@ class DashboardViewModel @Inject constructor(
         // Always ensure Profiles is in visibleCards (cannot be disabled)
         val actualVisibleCards = visibleCards + CardGroup.Profiles
         val disabledItems = allItems - actualVisibleCards
-        Settings.dashboardDisabledItems = disabledItems.map { cardGroupToString(it) }.toSet()
-    }
-
-    private fun cardGroupToString(card: CardGroup): String = card.name
-
-    private fun stringToCardGroup(name: String): CardGroup? = try {
-        CardGroup.valueOf(name)
-    } catch (e: IllegalArgumentException) {
-        null
+        Settings.dashboardDisabledItems = disabledItems.map { it.name }.toSet()
     }
 }
