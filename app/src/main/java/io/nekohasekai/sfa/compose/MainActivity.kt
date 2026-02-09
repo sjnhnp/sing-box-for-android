@@ -76,6 +76,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -991,14 +992,7 @@ class MainActivity :
         // Groups ModalBottomSheet
         if (showGroupsSheet && !useNavigationRail) {
             val groupsSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
-            val groupsViewModel: GroupsViewModel = viewModel(
-                factory = object : ViewModelProvider.Factory {
-                    override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                        @Suppress("UNCHECKED_CAST")
-                        return GroupsViewModel(dashboardViewModel.commandClient) as T
-                    }
-                },
-            )
+            val groupsViewModel: GroupsViewModel = hiltViewModel()
             val groupsUiState by groupsViewModel.uiState.collectAsState()
             val allCollapsed = groupsUiState.expandedGroups.isEmpty()
 
@@ -1016,7 +1010,6 @@ class MainActivity :
                     // Groups content
                     GroupsCard(
                         serviceStatus = currentServiceStatus,
-                        commandClient = dashboardViewModel.commandClient,
                         viewModel = groupsViewModel,
                         listHeaderContent = {
                             Row(
