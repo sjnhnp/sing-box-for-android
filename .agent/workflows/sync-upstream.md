@@ -64,6 +64,15 @@ These files are unique to our Hilt implementation. Upstream likely does not have
       - **If Theme/DI/Strict UI**:
         `git checkout --ours <file_path>`
         (We ignore upstream UI changes completely)
+   
+   C. **🛡️ MANDATORY SAFETY LOCK (Execute Immediately After Merge)**
+      Whatever happens during the merge, **IMMEDIATELY** run this to restore our exclusive files that upstream might try to delete or overwrite:
+      ```bash
+      git checkout HEAD -- app/src/main/java/io/nekohasekai/sfa/di/CoroutinesModule.kt
+      git checkout HEAD -- app/src/main/java/io/nekohasekai/sfa/di/Qualifiers.kt
+      git checkout HEAD -- app/src/main/java/io/nekohasekai/sfa/Theme.kt
+      git checkout HEAD -- app/src/main/java/io/nekohasekai/sfa/constant/*
+      ```
 
       - **If Architecture (ViewModel/Activity)**:
         1. Read upstream version: `git show upstream/dev:<file_path>`
