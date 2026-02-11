@@ -6,104 +6,48 @@ This workflow merges the latest changes from the upstream repository (SagerNet/s
 
 ## 🛡️ Critical Files & Merge Strategy
 
-### 1. Architecture & Core Logic (⚠️ MERGE WITH EXTREME CAUTION)
-These files implement our custom Hilt/MVI architecture. **Direct merging will likely break the app.** You must manually inspect upstream changes and *adapt* them to our architecture.
+### 1. The "Golden State" Architecture (⚠️ DO NOT REVERT)
+Your task is to preserve the **Hilt + MVI** state established in `26b1a33` and optimized in subsequent commits (`ed897a6`, `ccb9ab4`, etc.).
 
-- **`app/src/main/java/io/nekohasekai/sfa/compose/screen/dashboard/DashboardViewModel.kt`**
-  - **Our State:** MVI (Intent/State), Hilt `@Inject`, no public methods except `dispatch`.
-  - **Strategy:** If upstream adds public methods/logic, **DO NOT** merge directly. Refactor them into `DashboardIntent` and handle in `dispatch()`.
+- **Hilt Enforcement**: 
+  - `Application.kt` must have `@HiltAndroidApp`.
+  - All ViewModels (`Dashboard`, `Groups`, `Connections`, `Log`) must have `@HiltViewModel` and `@Inject constructor`.
+  - `MainActivity.kt` must use `hiltViewModel()` instead of manual factories.
 
-- **`app/src/main/java/io/nekohasekai/sfa/compose/MainActivity.kt`**
-  - **Our State:** `@AndroidEntryPoint`, dispatch-based interactions.
-  - **Strategy:** Preserve our annotations and UI setup. If upstream adds logic (e.g., new receivers), adapt to use `viewModel.dispatch`.
+- **MVI Enforcement**:
+  - `DashboardViewModel.kt` must use `DashboardIntent` for state changes.
+  - **CRITICAL IMPORT**: `kotlinx.coroutines.flow.update` must be present in `DashboardViewModel.kt` to avoid compilation failure.
 
-- **`app/src/main/java/io/nekohasekai/sfa/utils/CommandClient.kt`**
-  - **Our State:** Singleton via Hilt, secondary constructors for legacy support.
-  - **Strategy:** Preserve `@Inject` constructor. Ensure new upstream parameters are added to *both* the primary (`@Inject`) and secondary constructors.
-
-- **`app/src/main/java/io/nekohasekai/sfa/compose/screen/dashboard/groups/GroupsViewModel.kt`**
-  - **Our State:** Hilt `@Inject`, simplified `init`.
-  - **Strategy:** Keep Hilt injection. Adapt upstream logic changes.
-
-- **`app/src/main/java/io/nekohasekai/sfa/compose/screen/connections/ConnectionsViewModel.kt`**
-- **`app/src/main/java/io/nekohasekai/sfa/compose/screen/log/LogViewModel.kt`**
-  - **Status:** Now uses Hilt `@Inject`.
-  - **Strategy:** Protect the constructor and Hilt annotations.
-
-- **`app/src/main/java/io/nekohasekai/sfa/compose/screen/dashboard/DashboardScreen.kt`**
-  - **Status:** Uses `DashboardIntent` for all interactions.
-  - **Strategy:** **DO NOT** accept upstream changes that replace `dispatch` calls with direct ViewModel method calls.
-
-### 2. Dependency Injection (ALWAYS KEEP OURS)
-These files are unique to our Hilt implementation. Upstream likely does not have them or has different DI.
-
-- `app/src/main/java/io/nekohasekai/sfa/di/CoroutinesModule.kt`
-- `app/src/main/java/io/nekohasekai/sfa/di/Qualifiers.kt`
-- `app/src/main/java/io/nekohasekai/sfa/Application.kt` (Annotated with `@HiltAndroidApp`)
-
-### 3. Theme & Styling (ALWAYS KEEP OURS)
-- `app/src/main/java/io/nekohasekai/sfa/compose/theme/*`
-- `app/src/main/java/io/nekohasekai/sfa/compose/component/*`
-
-### 4. Build Configuration (PRESERVE CRITICAL SETTINGS)
-- **`gradle.properties`**: MUST generate/keep `org.gradle.java.home=...jdk-17...` (or equivalent) to avoid Java 25 class version errors.
-- **`app/build.gradle.kts`**: Preserve `hilt-android`, `ksp`, and `hilt-navigation-compose` dependencies.
+- **Environment Setting**:
+  - `gradle.properties`: We no longer hardcode `org.gradle.java.home` (as per `75766fa`) to ensure CI flexibility. Do not re-add it unless compilation fails locally.
 
 ## 🔄 Workflow Steps
 
-1. **Setup Remote**
-   Ensure `upstream` remote exists:
-   // turbo
-   `git remote -v`
-   (Add if missing: `git remote add upstream https://github.com/SagerNet/sing-box-for-android.git`)
-
-2. **Fetch Upstream**
-   // turbo
+1. **Setup & Fetch Upstream**
    `git fetch upstream`
 
-3. **Smart Merge (Step-by-Step)**
+2. **Pre-Merge Snapshot**
+   Take note of the current state of `MainActivity` and `DashboardViewModel`.
 
-   A. **Merge Non-Conflicting Changes**
-      Try a standar merge first, but *do not commit* if conflicts exist.
-      `git merge upstream/dev --no-commit --no-ff`
+3. **Smart Merge**
+   `git merge upstream/dev --no-commit --no-ff`
 
-   B. **Resolve Conflicts - The "Intelligent" Way**
-      For each conflicted file, ask: "Does this file belong to a protected category?"
+4. **🛡️ The "Safety Lock" Execution**
+   If upstream deleted or corrupted our DI files, restore them immediately:
+   ```bash
+   git checkout HEAD -- app/src/main/java/io/nekohasekai/sfa/di/*
+   git checkout HEAD -- app/src/main/java/io/nekohasekai/sfa/Application.kt
+   ```
 
-      - **If Theme/DI/Strict UI**:
-        `git checkout --ours <file_path>`
-        (We ignore upstream UI changes completely)
-   
-   C. **🛡️ MANDATORY SAFETY LOCK (Execute Immediately After Merge)**
-      Whatever happens during the merge, **IMMEDIATELY** run this to restore our exclusive files that upstream might try to delete or overwrite:
-      ```bash
-      git checkout HEAD -- app/src/main/java/io/nekohasekai/sfa/di/CoroutinesModule.kt
-      git checkout HEAD -- app/src/main/java/io/nekohasekai/sfa/di/Qualifiers.kt
-      git checkout HEAD -- app/src/main/java/io/nekohasekai/sfa/Application.kt
-      git checkout HEAD -- app/src/main/java/io/nekohasekai/sfa/compose/screen/dashboard/DashboardIntent.kt
-      ```
+5. **Anti-Regression Check (MANDATORY)**
+   Check for these common "silent regressions":
+   - **Check Imports**: Ensure `DashboardViewModel.kt` still has `kotlinx.coroutines.flow.update`.
+   - **Check Injection**: Ensure `MainActivity` shows `val viewModel: DashboardViewModel = hiltViewModel()`.
+   - **Check Groups**: Ensure `GroupsViewModel` is injected, not manually instantiated.
 
-      - **If Architecture (ViewModel/Activity)**:
-        1. Read upstream version: `git show upstream/dev:<file_path>`
-        2. Identify *new logic* (bug fixes, new features).
-        3. **Manually apply** that logic into our Hilt/MVI structure.
-        4. **DO NOT** accept upstream changes that remove `@Inject` or add public methods.
+6. **Verification & Commit**
+   - Run compilation check: `./gradlew assembleDebug`
+   - Commit message: `Merge upstream/dev: Preserved Hilt/MVI architecture and post-refactor optimizations`
 
-      - **If Logic/Libbox**:
-        Merge carefully. We generally want upstream's core logic fixes.
-
-4. **Verify Architecture Integrity**
-   Before committing, check:
-   - Does `DashboardViewModel` still implement MVI?
-   - Are Hilt annotations (`@HiltAndroidApp`, `@AndroidEntryPoint`, `@Inject`) present?
-   - Is `CommandClient` correctly injected?
-
-5. **Commit & Push**
-   `git commit -m "Merge upstream/dev: Preserved Hilt/MVI architecture and custom UI"`
-   `git push origin dev`
-
-## 🚨 Post-Merge Architecture Checklist
-
-After merging, you **MUST** verify the app compiles. The new architecture is strict.
-1. **Compilation**: `./gradlew assembleDebug`
-2. **Runtime**: Check that `Dashboard` loads without crashing (verifies Hilt injection graph).
+## 🚨 AI Self-Memory Note
+You (the AI) should **always** look at the git history from `26b1a33` onwards before merging. This commit marks the "Era of Hilt/MVI". Any upstream change that attempts to revert code to a pre-Hilt state (e.g., direct field access in MainActivity) must be treated as a conflict and refactored into the MVI pattern.
