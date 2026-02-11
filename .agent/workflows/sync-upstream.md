@@ -25,6 +25,15 @@ These files implement our custom Hilt/MVI architecture. **Direct merging will li
   - **Our State:** Hilt `@Inject`, simplified `init`.
   - **Strategy:** Keep Hilt injection. Adapt upstream logic changes.
 
+- **`app/src/main/java/io/nekohasekai/sfa/compose/screen/connections/ConnectionsViewModel.kt`**
+- **`app/src/main/java/io/nekohasekai/sfa/compose/screen/log/LogViewModel.kt`**
+  - **Status:** Now uses Hilt `@Inject`.
+  - **Strategy:** Protect the constructor and Hilt annotations.
+
+- **`app/src/main/java/io/nekohasekai/sfa/compose/screen/dashboard/DashboardScreen.kt`**
+  - **Status:** Uses `DashboardIntent` for all interactions.
+  - **Strategy:** **DO NOT** accept upstream changes that replace `dispatch` calls with direct ViewModel method calls.
+
 ### 2. Dependency Injection (ALWAYS KEEP OURS)
 These files are unique to our Hilt implementation. Upstream likely does not have them or has different DI.
 
@@ -70,8 +79,8 @@ These files are unique to our Hilt implementation. Upstream likely does not have
       ```bash
       git checkout HEAD -- app/src/main/java/io/nekohasekai/sfa/di/CoroutinesModule.kt
       git checkout HEAD -- app/src/main/java/io/nekohasekai/sfa/di/Qualifiers.kt
-      git checkout HEAD -- app/src/main/java/io/nekohasekai/sfa/Theme.kt
-      git checkout HEAD -- app/src/main/java/io/nekohasekai/sfa/constant/*
+      git checkout HEAD -- app/src/main/java/io/nekohasekai/sfa/Application.kt
+      git checkout HEAD -- app/src/main/java/io/nekohasekai/sfa/compose/screen/dashboard/DashboardIntent.kt
       ```
 
       - **If Architecture (ViewModel/Activity)**:
