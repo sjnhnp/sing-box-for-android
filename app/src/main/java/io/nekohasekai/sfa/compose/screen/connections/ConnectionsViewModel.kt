@@ -50,8 +50,7 @@ class ConnectionsViewModel @Inject constructor(
     CommandClient.Handler {
     
     init {
-        commandClient.setTypes(listOf(CommandClient.ConnectionType.Connections))
-        commandClient.addHandler(this)
+        commandClient.addHandler(this, setOf(CommandClient.ConnectionType.Connections))
     }
 
     private val _serviceStatus = MutableStateFlow(Status.Stopped)
@@ -87,9 +86,9 @@ class ConnectionsViewModel @Inject constructor(
                     state.visibleCount > 0 && state.status == Status.Started
                 if (shouldConnect) {
                     updateState { copy(isLoading = true) }
-                    commandClient.connect()
+                    commandClient.connect(this@ConnectionsViewModel)
                 } else {
-                    commandClient.disconnect()
+                    commandClient.disconnect(this@ConnectionsViewModel)
                 }
             }
         }
@@ -101,7 +100,7 @@ class ConnectionsViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        commandClient.disconnect()
+        commandClient.removeHandler(this)
     }
 
     private suspend fun handleServiceStatusChange(status: Status) {

@@ -29,16 +29,15 @@ class LogViewModel @Inject constructor(
     private var lastServiceStatus: Status = Status.Stopped
     
     init {
-        commandClient.setTypes(listOf(CommandClient.ConnectionType.Log))
-        commandClient.addHandler(this)
+        commandClient.addHandler(this, setOf(CommandClient.ConnectionType.Log))
 
         viewModelScope.launch {
             AppLifecycleObserver.isForeground.collect { foreground ->
                 if (lastServiceStatus != Status.Started) return@collect
                 if (foreground) {
-                    commandClient.connect()
+                    commandClient.connect(this@LogViewModel)
                 } else {
-                    commandClient.disconnect()
+                    commandClient.disconnect(this@LogViewModel)
                 }
             }
         }
@@ -60,12 +59,12 @@ class LogViewModel @Inject constructor(
         when (status) {
             Status.Started -> {
                 if (AppLifecycleObserver.isForeground.value) {
-                    commandClient.connect()
+                    commandClient.connect(this@LogViewModel)
                 }
             }
 
             Status.Stopped, Status.Stopping -> {
-                commandClient.disconnect()
+                commandClient.disconnect(this@LogViewModel)
                 _uiState.update { it.copy(isConnected = false) }
             }
 
@@ -149,6 +148,6 @@ class LogViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        commandClient.disconnect()
+        commandClient.removeHandler(this)
     }
 }

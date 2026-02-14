@@ -177,22 +177,22 @@ class DashboardViewModel @Inject constructor(
         loadProfiles()
         ProfileManager.registerCallback(::onProfilesChanged)
 
-        commandClient.setTypes(
-            listOf(
+        commandClient.addHandler(
+            this,
+            setOf(
                 CommandClient.ConnectionType.Status,
                 CommandClient.ConnectionType.ClashMode,
                 CommandClient.ConnectionType.Groups,
             )
         )
-        commandClient.addHandler(this)
 
         viewModelScope.launch {
             AppLifecycleObserver.isForeground.collect { foreground ->
                 if (_serviceStatus.value != Status.Started) return@collect
                 if (foreground) {
-                    commandClient.connect()
+                    commandClient.connect(this@DashboardViewModel)
                 } else {
-                    commandClient.disconnect()
+                    commandClient.disconnect(this@DashboardViewModel)
                 }
             }
         }
@@ -476,14 +476,14 @@ class DashboardViewModel @Inject constructor(
             Status.Started -> {
                 checkDeprecatedNotes()
                 if (AppLifecycleObserver.isForeground.value) {
-                    commandClient.connect()
+                    commandClient.connect(this@DashboardViewModel)
                 }
                 reloadSystemProxyStatus()
                 reloadStartedAt()
             }
 
             Status.Stopped -> {
-                commandClient.disconnect()
+                commandClient.disconnect(this@DashboardViewModel)
                 updateState {
                     copy(
                         hasGroups = false,
