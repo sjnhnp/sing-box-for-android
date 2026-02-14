@@ -2,7 +2,6 @@ package io.nekohasekai.sfa.utils
 
 import android.util.Log
 import go.Seq
-import io.nekohasekai.libbox.CommandClient
 import io.nekohasekai.libbox.CommandClientHandler
 import io.nekohasekai.libbox.CommandClientOptions
 import io.nekohasekai.libbox.ConnectionEvents
@@ -17,6 +16,7 @@ import io.nekohasekai.sfa.ktx.toList
 import kotlinx.coroutines.CoroutineScope
 
 import io.nekohasekai.sfa.di.ApplicationScope
+import java.util.Collections
 import javax.inject.Inject
 import javax.inject.Singleton
 
