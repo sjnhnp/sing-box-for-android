@@ -8,10 +8,10 @@ import android.net.Uri
 import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AppCompatActivity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
@@ -131,7 +131,7 @@ import kotlinx.coroutines.withContext
 
 @AndroidEntryPoint
 class MainActivity :
-    ComponentActivity(),
+    AppCompatActivity(),
     ServiceConnection.Callback {
     private val connection = ServiceConnection(this, this)
     private lateinit var dashboardViewModel: DashboardViewModel
@@ -591,7 +591,7 @@ class MainActivity :
         }
 
         // Initialize the dashboard view model and store reference
-        val dashboardViewModel: DashboardViewModel = viewModel()
+        val dashboardViewModel: DashboardViewModel = hiltViewModel()
         if (!::dashboardViewModel.isInitialized) {
             this.dashboardViewModel = dashboardViewModel
         }
@@ -616,7 +616,7 @@ class MainActivity :
         // Get LogViewModel instance if we're on the Log screen
         val logViewModel: LogViewModel? =
             if (isLogRoute) {
-                viewModel()
+                hiltViewModel()
             } else {
                 null
             }
@@ -624,14 +624,14 @@ class MainActivity :
         val groupsViewModel: GroupsViewModel? =
             if (isGroupsRoute) {
                 // Hilt will inject the dependencies automatically
-                viewModel()
+                hiltViewModel()
             } else {
                 null
             }
 
         val connectionsViewModel: ConnectionsViewModel? =
             if (isConnectionsRoute) {
-                viewModel()
+                hiltViewModel()
             } else {
                 null
             }
