@@ -16,6 +16,7 @@ import io.nekohasekai.libbox.SetupOptions
 import io.nekohasekai.sfa.bg.AppChangeReceiver
 import io.nekohasekai.sfa.bg.UpdateProfileWork
 import io.nekohasekai.sfa.constant.Bugs
+import io.nekohasekai.sfa.database.Settings
 import io.nekohasekai.sfa.utils.AppLifecycleObserver
 import io.nekohasekai.sfa.utils.HookModuleUpdateNotifier
 import io.nekohasekai.sfa.utils.HookStatusClient
@@ -69,6 +70,18 @@ class Application : Application() {
         baseDir.mkdirs()
         val workingDir = getExternalFilesDir(null) ?: return
         workingDir.mkdirs()
+
+        if (Settings.lastExecutedVersionCode != BuildConfig.VERSION_CODE) {
+            val cacheFile = File(workingDir, "cache.db")
+            if (cacheFile.exists()) {
+                cacheFile.delete()
+                File(workingDir, "cache.db-shm").delete()
+                File(workingDir, "cache.db-wal").delete()
+                File(workingDir, "cache.db-journal").delete()
+            }
+            Settings.lastExecutedVersionCode = BuildConfig.VERSION_CODE
+        }
+
         val tempDir = cacheDir
         tempDir.mkdirs()
         Libbox.setup(
