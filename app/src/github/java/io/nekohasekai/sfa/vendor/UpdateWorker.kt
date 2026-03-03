@@ -51,7 +51,7 @@ class UpdateWorker(private val appContext: Context, params: WorkerParameters) : 
     }
 
     override suspend fun doWork(): Result {
-        if (!Settings.autoUpdateEnabled) {
+        if (!Settings.autoUpdateEnabled || Vendor.installedFromFDroid()) {
             Log.d(TAG, "Auto update disabled, skipping")
             return Result.success()
         }

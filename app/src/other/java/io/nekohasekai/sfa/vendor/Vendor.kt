@@ -1,12 +1,16 @@
 package io.nekohasekai.sfa.vendor
 
 import android.app.Activity
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.util.Log
 import androidx.camera.core.ImageAnalysis
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import io.nekohasekai.sfa.Application
+import io.nekohasekai.sfa.BuildConfig
 import io.nekohasekai.sfa.R
 import io.nekohasekai.sfa.bg.RootClient
 import io.nekohasekai.sfa.compose.screen.qrscan.QRCodeCropArea
@@ -18,6 +22,31 @@ import io.nekohasekai.sfa.update.UpdateTrack
 
 object Vendor : VendorInterface {
     private const val TAG = "Vendor"
+    private const val DEBUG_FDROID_INSTALL = false
+
+    private val installerPackage: String? by lazy {
+        if (BuildConfig.DEBUG && DEBUG_FDROID_INSTALL) return@lazy "org.fdroid.fdroid"
+        val app = Application.application
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                app.packageManager.getInstallSourceInfo(app.packageName).installingPackageName
+            } else {
+                @Suppress("DEPRECATION")
+                app.packageManager.getInstallerPackageName(app.packageName)
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private val fdroidInstall: Boolean by lazy {
+        if (BuildConfig.DEBUG && DEBUG_FDROID_INSTALL) return@lazy true
+        val installer = installerPackage ?: return@lazy false
+        val app = Application.application
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("fdroidrepo://example.com/repo"))
+        intent.setPackage(installer)
+        app.packageManager.resolveActivity(intent, PackageManager.MATCH_DEFAULT_ONLY) != null
+    }
 
     override fun checkUpdate(activity: Activity, byUser: Boolean) {
         try {
@@ -93,18 +122,27 @@ object Vendor : VendorInterface {
         onCropArea: ((QRCodeCropArea?) -> Unit)?,
     ): ImageAnalysis.Analyzer? = null
 
-    override fun supportsTrackSelection(): Boolean = true
+    override fun installedFromFDroid(): Boolean = fdroidInstall
+
+    override fun openInInstaller(context: Context) {
+        val intent = Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=${context.packageName}"))
+        intent.setPackage(installerPackage)
+        context.startActivity(intent)
+    }
+
+    override fun supportsTrackSelection(): Boolean = !fdroidInstall
 
     override fun checkUpdateAsync(): UpdateInfo? {
+        if (fdroidInstall) return null
         val track = UpdateTrack.fromString(Settings.updateTrack)
         return GitHubUpdateChecker().use { checker ->
             checker.checkUpdate(track)
         }
     }
 
-    override fun supportsSilentInstall(): Boolean = true
+    override fun supportsSilentInstall(): Boolean = !fdroidInstall
 
-    override fun supportsAutoUpdate(): Boolean = true
+    override fun supportsAutoUpdate(): Boolean = !fdroidInstall
 
     override fun scheduleAutoUpdate() {
         UpdateWorker.schedule(io.nekohasekai.sfa.Application.application)
@@ -115,6 +153,7 @@ object Vendor : VendorInterface {
             "PACKAGE_INSTALLER" -> {
                 ApkInstaller.canSystemSilentInstall()
             }
+
             "SHIZUKU" -> {
                 if (!ShizukuInstaller.isAvailable()) {
                     return false
@@ -125,6 +164,7 @@ object Vendor : VendorInterface {
                 }
                 true
             }
+
             "ROOT" -> RootClient.checkRootAvailable()
             else -> false
         }
