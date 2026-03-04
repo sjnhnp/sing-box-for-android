@@ -63,4 +63,8 @@ interface VendorInterface {
      * @throws Exception if download or install fails
      */
     suspend fun downloadAndInstall(context: android.content.Context, downloadUrl: String): Unit = throw UnsupportedOperationException("Not supported in this flavor")
+
+    fun installedFromFDroid(): Boolean = false
+
+    fun openInInstaller(context: android.content.Context) {}
 }

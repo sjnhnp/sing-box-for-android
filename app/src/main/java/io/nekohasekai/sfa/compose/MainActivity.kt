@@ -196,7 +196,7 @@ class MainActivity :
         connection.reconnect()
 
         UpdateState.loadFromCache()
-        if (Settings.checkUpdateEnabled) {
+        if (Settings.checkUpdateEnabled && !Vendor.installedFromFDroid()) {
             lifecycleScope.launch(Dispatchers.IO) {
                 try {
                     val updateInfo = Vendor.checkUpdateAsync()
