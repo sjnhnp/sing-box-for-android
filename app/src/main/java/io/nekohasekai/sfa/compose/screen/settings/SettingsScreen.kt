@@ -1,7 +1,5 @@
 package io.nekohasekai.sfa.compose.screen.settings
 
-import android.os.Build
-import android.os.PowerManager
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -40,6 +38,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -80,15 +79,8 @@ fun SettingsScreen(navController: NavController) {
     val hookStatus by HookStatusClient.status.collectAsState()
     val hasPendingPrivilegeDowngrade = HookModuleUpdateNotifier.isDowngrade(hookStatus)
     val hasPendingPrivilegeUpdate = HookModuleUpdateNotifier.isUpgrade(hookStatus)
-    var isBatteryOptimizationIgnored by remember { mutableStateOf(true) }
-
     LaunchedEffect(Unit) {
         HookStatusClient.refresh()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            val pm = context.getSystemService(PowerManager::class.java)
-            isBatteryOptimizationIgnored =
-                pm?.isIgnoringBatteryOptimizations(context.packageName) == true
-        }
     }
 
     Column(
@@ -118,12 +110,14 @@ fun SettingsScreen(navController: NavController) {
                     onClick = { navController.navigate("settings/core") },
                 )
 
-                SettingsItem(
-                    title = stringResource(R.string.service),
-                    icon = Icons.Outlined.Tune,
-                    onClick = { navController.navigate("settings/service") },
-                    showBadge = !isBatteryOptimizationIgnored,
-                )
+                if (Vendor.isPerAppProxyAvailable()) {
+                    SettingsItem(
+                        title = stringResource(R.string.service),
+                        icon = Icons.Outlined.Tune,
+                        onClick = { navController.navigate("settings/service") },
+                    )
+                }
+
 
                 SettingsItem(
                     title = stringResource(R.string.profile_override),

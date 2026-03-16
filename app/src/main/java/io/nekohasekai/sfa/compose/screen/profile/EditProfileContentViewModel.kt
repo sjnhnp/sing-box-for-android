@@ -42,17 +42,19 @@ data class EditProfileContentUiState(
     val isSearching: Boolean = false, // For async search indicator
 )
 
-class EditProfileContentViewModel(private val profileId: Long, initialProfileName: String = "", initialIsReadOnly: Boolean = false) : ViewModel() {
+class EditProfileContentViewModel(
+    private val profileId: Long,
+    initialProfileName: String = "",
+    initialIsReadOnly: Boolean = false
+) : ViewModel() {
     companion object {
         // Performance thresholds
         private const val LARGE_FILE_THRESHOLD_BYTES = 100_000L // 100KB
         private const val MAX_UNDO_HISTORY_SIZE = 50
     }
-
     private val _uiState =
         MutableStateFlow(
             EditProfileContentUiState(
-                profileName = initialProfileName,
                 isReadOnly = initialIsReadOnly,
             ),
         )
@@ -229,7 +231,7 @@ class EditProfileContentViewModel(private val profileId: Long, initialProfileNam
                             isLoading = false,
                             fileSizeBytes = fileSize,
                             showLargeFileWarning = isLargeFile,
-                            // Keep profileName and isReadOnly from initial state - no need to update
+                            profileName = loadedProfile.name,
                         )
                     }
                 }
@@ -642,13 +644,12 @@ class EditProfileContentViewModel(private val profileId: Long, initialProfileNam
 
     class Factory(
         private val profileId: Long,
-        private val initialProfileName: String = "",
         private val initialIsReadOnly: Boolean = false,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(EditProfileContentViewModel::class.java)) {
-                return EditProfileContentViewModel(profileId, initialProfileName, initialIsReadOnly) as T
+                return EditProfileContentViewModel(profileId, initialIsReadOnly) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }
