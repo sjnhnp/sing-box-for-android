@@ -17,8 +17,10 @@ import io.nekohasekai.sfa.compose.screen.qrscan.QRCodeCropArea
 import io.nekohasekai.sfa.database.Settings
 import io.nekohasekai.sfa.update.UpdateCheckException
 import io.nekohasekai.sfa.update.UpdateInfo
+import io.nekohasekai.sfa.update.UpdateSource
 import io.nekohasekai.sfa.update.UpdateState
 import io.nekohasekai.sfa.update.UpdateTrack
+import io.nekohasekai.sfa.update.checkFDroidUpdate
 
 object Vendor : VendorInterface {
     private const val TAG = "Vendor"
@@ -130,20 +132,19 @@ object Vendor : VendorInterface {
         context.startActivity(intent)
     }
 
-    override fun supportsTrackSelection(): Boolean = !fdroidInstall
+    override val hasCustomUpdate = true
 
-    override fun checkUpdateAsync(): UpdateInfo? {
-        if (fdroidInstall) return null
-        val track = UpdateTrack.fromString(Settings.updateTrack)
-        return GitHubUpdateChecker().use { checker ->
-            checker.checkUpdate(track)
+    override val updateSources = listOf(UpdateSource.GITHUB, UpdateSource.FDROID)
+
+    override fun checkUpdateAsync(): UpdateInfo? = when (UpdateSource.fromString(Settings.updateSource)) {
+        UpdateSource.FDROID -> checkFDroidUpdate(Application.application)
+        UpdateSource.GITHUB -> {
+            val track = UpdateTrack.fromString(Settings.updateTrack)
+            GitHubUpdateChecker().use { checker ->
+                checker.checkUpdate(track)
+            }
         }
     }
-
-    override fun supportsSilentInstall(): Boolean = !fdroidInstall
-
-    override fun supportsAutoUpdate(): Boolean = !fdroidInstall
-
     override fun scheduleAutoUpdate() {
         UpdateWorker.schedule(io.nekohasekai.sfa.Application.application)
     }
