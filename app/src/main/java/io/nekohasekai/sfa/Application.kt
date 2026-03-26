@@ -71,7 +71,10 @@ class Application : Application() {
         val workingDir = getExternalFilesDir(null) ?: return
         workingDir.mkdirs()
 
-        if (Settings.lastExecutedVersionCode != BuildConfig.VERSION_CODE) {
+        val currentMajorVersion = BuildConfig.VERSION_NAME.split(".").firstOrNull()?.toIntOrNull() ?: 0
+        val lastMajorVersion = Settings.lastExecutedMajorVersion
+
+        if (lastMajorVersion != 0 && lastMajorVersion != currentMajorVersion) {
             val cacheFile = File(workingDir, "cache.db")
             if (cacheFile.exists()) {
                 cacheFile.delete()
@@ -79,8 +82,8 @@ class Application : Application() {
                 File(workingDir, "cache.db-wal").delete()
                 File(workingDir, "cache.db-journal").delete()
             }
-            Settings.lastExecutedVersionCode = BuildConfig.VERSION_CODE
         }
+        Settings.lastExecutedMajorVersion = currentMajorVersion
 
         val tempDir = cacheDir
         tempDir.mkdirs()
