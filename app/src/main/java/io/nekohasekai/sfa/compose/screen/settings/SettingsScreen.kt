@@ -54,6 +54,7 @@ import io.nekohasekai.sfa.compose.topbar.OverrideTopBar
 import io.nekohasekai.sfa.update.UpdateState
 import io.nekohasekai.sfa.utils.HookModuleUpdateNotifier
 import io.nekohasekai.sfa.utils.HookStatusClient
+import io.nekohasekai.sfa.vendor.Vendor
 
 // ============================================================================
 // 2026 Settings Screen - 精致设置页面

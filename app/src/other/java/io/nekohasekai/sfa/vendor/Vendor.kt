@@ -180,4 +180,8 @@ object Vendor : VendorInterface {
         }
         ApkInstaller.install(context, apkFile)
     }
+
+    override fun supportsSilentInstall(): Boolean = true
+
+    override fun supportsAutoUpdate(): Boolean = true
 }

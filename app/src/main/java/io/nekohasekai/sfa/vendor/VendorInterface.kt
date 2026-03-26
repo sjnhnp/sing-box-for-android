@@ -27,6 +27,10 @@ interface VendorInterface {
 
     suspend fun verifySilentInstallMethod(method: String): Boolean = false
 
+    fun supportsSilentInstall(): Boolean = false
+
+    fun supportsAutoUpdate(): Boolean = false
+
     suspend fun downloadAndInstall(context: android.content.Context, downloadUrl: String): Unit = throw UnsupportedOperationException("Not supported in this flavor")
 
     fun installedFromFDroid(): Boolean = false

@@ -644,12 +644,13 @@ class EditProfileContentViewModel(
 
     class Factory(
         private val profileId: Long,
+        private val initialProfileName: String = "",
         private val initialIsReadOnly: Boolean = false,
     ) : ViewModelProvider.Factory {
         @Suppress("UNCHECKED_CAST")
         override fun <T : ViewModel> create(modelClass: Class<T>): T {
             if (modelClass.isAssignableFrom(EditProfileContentViewModel::class.java)) {
-                return EditProfileContentViewModel(profileId, initialIsReadOnly) as T
+                return EditProfileContentViewModel(profileId, initialProfileName, initialIsReadOnly) as T
             }
             throw IllegalArgumentException("Unknown ViewModel class")
         }
