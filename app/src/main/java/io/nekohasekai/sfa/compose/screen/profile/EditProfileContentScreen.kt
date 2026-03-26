@@ -96,7 +96,7 @@ fun EditProfileContentScreen(
 ) {
     val viewModel: EditProfileContentViewModel =
         viewModel(
-            factory = EditProfileContentViewModel.Factory(profileId, isReadOnly),
+            factory = EditProfileContentViewModel.Factory(profileId, "", isReadOnly),
         )
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
