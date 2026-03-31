@@ -149,8 +149,9 @@ class RootServer : RootService() {
                 when (method.name) {
                     "hashCode" -> System.identityHashCode(proxyObject)
                     "equals" -> proxyObject === args?.get(0)
-                    "toString" -> proxyObject.javaClass.name + "@" +
-                        Integer.toHexString(System.identityHashCode(proxyObject))
+                    "toString" ->
+                        proxyObject.javaClass.name + "@" +
+                            Integer.toHexString(System.identityHashCode(proxyObject))
                     "onClientsChanged" -> {
                         if (args != null) {
                             @Suppress("UNCHECKED_CAST")
@@ -194,6 +195,7 @@ class RootServer : RootService() {
             if (client == null) continue
             try {
                 val mac = getMacAddress.invoke(client).toString().uppercase()
+
                 @Suppress("UNCHECKED_CAST")
                 val addresses = getAddresses.invoke(client) as List<*>
                 for (info in addresses) {

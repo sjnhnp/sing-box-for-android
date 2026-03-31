@@ -198,9 +198,14 @@ open class CommandClient @Inject constructor(
             options.addCommand(command)
         }
         options.statusInterval = 1 * 1000 * 1000 * 1000
-        val client = io.nekohasekai.libbox.CommandClient(clientHandler, options)
-        client.connect()
-        this.commandClient = client
+        val commandClient = io.nekohasekai.libbox.CommandClient(clientHandler, options)
+        try {
+            commandClient.connect()
+        } catch (e: Exception) {
+            Log.d("CommandClient", "connect failed", e)
+            return
+        }
+        this.commandClient = commandClient
         
         isInternalReconnecting = false
     }

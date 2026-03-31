@@ -9,7 +9,8 @@ public class NeighborEntry implements Parcelable {
   @NonNull public final String macAddress;
   @NonNull public final String hostname;
 
-  public NeighborEntry(@NonNull String address, @NonNull String macAddress, @NonNull String hostname) {
+  public NeighborEntry(
+      @NonNull String address, @NonNull String macAddress, @NonNull String hostname) {
     this.address = address;
     this.macAddress = macAddress;
     this.hostname = hostname;

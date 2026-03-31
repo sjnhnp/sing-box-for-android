@@ -186,13 +186,17 @@ interface PlatformInterfaceWrapper : PlatformInterface {
                 if (entries == null) return
                 @Suppress("UNCHECKED_CAST")
                 val list = entries.list as List<NeighborEntry>
-                listener.updateNeighborTable(NeighborEntryArray(list.map { entry ->
-                    LibboxNeighborEntry().apply {
-                        address = entry.address
-                        macAddress = entry.macAddress
-                        hostname = entry.hostname
-                    }
-                }.iterator()))
+                listener.updateNeighborTable(
+                    NeighborEntryArray(
+                        list.map { entry ->
+                            LibboxNeighborEntry().apply {
+                                address = entry.address
+                                macAddress = entry.macAddress
+                                hostname = entry.hostname
+                            }
+                        }.iterator(),
+                    ),
+                )
             }
         }
         neighborCallback = callback
