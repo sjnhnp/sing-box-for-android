@@ -95,9 +95,21 @@ class Application : Application() {
                 it.fixAndroidStack = Bugs.fixAndroidStack
                 it.logMaxLines = 3000
                 it.debug = BuildConfig.DEBUG
+                it.oomKillerEnabled = Settings.oomKillerEnabled
+                it.oomKillerDisabled = Settings.oomKillerDisabled
+                it.oomMemoryLimit = Settings.oomMemoryLimitMB.toLong() * 1024L * 1024L
             },
         )
-        Libbox.redirectStderr(File(workingDir, "stderr.log").path)
+    }
+
+    fun reloadSetupOptions() {
+        Libbox.reloadSetupOptions(
+            SetupOptions().also {
+                it.oomKillerEnabled = Settings.oomKillerEnabled
+                it.oomKillerDisabled = Settings.oomKillerDisabled
+                it.oomMemoryLimit = Settings.oomMemoryLimitMB.toLong() * 1024L * 1024L
+            }
+        )
     }
 
     companion object {
