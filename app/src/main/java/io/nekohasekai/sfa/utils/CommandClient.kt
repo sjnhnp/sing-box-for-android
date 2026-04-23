@@ -9,6 +9,7 @@ import io.nekohasekai.libbox.Libbox
 import io.nekohasekai.libbox.LogEntry
 import io.nekohasekai.libbox.LogIterator
 import io.nekohasekai.libbox.OutboundGroup
+import io.nekohasekai.libbox.OutboundGroupItemIterator
 import io.nekohasekai.libbox.OutboundGroupIterator
 import io.nekohasekai.libbox.StatusMessage
 import io.nekohasekai.libbox.StringIterator
@@ -42,6 +43,7 @@ open class CommandClient @Inject constructor(
 
     private val additionalHandlers = Collections.synchronizedList(mutableListOf<Handler>())
     private var cachedGroups: MutableList<OutboundGroup>? = null
+    private var cachedOutbounds: List<io.nekohasekai.libbox.OutboundGroupItem>? = null
 
     /**
      * Set types for this client. 
@@ -83,6 +85,9 @@ open class CommandClient @Inject constructor(
                 cachedGroups?.let { groups ->
                     handler.updateGroups(groups)
                 }
+                cachedOutbounds?.let { outbounds ->
+                    handler.updateOutbounds(outbounds)
+                }
             }
         }
     }
@@ -107,6 +112,7 @@ open class CommandClient @Inject constructor(
         Log,
         ClashMode,
         Connections,
+        Outbounds,
     }
 
     interface Handler {
@@ -117,6 +123,7 @@ open class CommandClient @Inject constructor(
         fun clearLogs() {}
         fun appendLogs(message: List<LogEntry>) {}
         fun updateGroups(newGroups: MutableList<OutboundGroup>) {}
+        fun updateOutbounds(outbounds: List<io.nekohasekai.libbox.OutboundGroupItem>) {}
         fun initializeClashMode(modeList: List<String>, currentMode: String) {}
         fun updateClashMode(newMode: String) {}
         fun writeConnectionEvents(events: ConnectionEvents) {}
@@ -188,13 +195,15 @@ open class CommandClient @Inject constructor(
         currentRunningTypes = types
         val options = CommandClientOptions()
         types.forEach { connectionType ->
-            val command = when (connectionType) {
-                ConnectionType.Status -> Libbox.CommandStatus
-                ConnectionType.Groups -> Libbox.CommandGroup
-                ConnectionType.Log -> Libbox.CommandLog
-                ConnectionType.ClashMode -> Libbox.CommandClashMode
-                ConnectionType.Connections -> Libbox.CommandConnections
-            }
+            val command =
+                when (connectionType) {
+                    ConnectionType.Status -> Libbox.CommandStatus
+                    ConnectionType.Groups -> Libbox.CommandGroup
+                    ConnectionType.Log -> Libbox.CommandLog
+                    ConnectionType.ClashMode -> Libbox.CommandClashMode
+                    ConnectionType.Connections -> Libbox.CommandConnections
+                    ConnectionType.Outbounds -> Libbox.CommandOutbounds
+                }
             options.addCommand(command)
         }
         options.statusInterval = 1 * 1000 * 1000 * 1000
@@ -242,6 +251,18 @@ open class CommandClient @Inject constructor(
             }
             cachedGroups = groups
             getAllHandlers().forEach { it.updateGroups(groups) }
+        }
+
+        override fun writeOutbounds(message: OutboundGroupItemIterator?) {
+            if (message == null) {
+                return
+            }
+            val outbounds = mutableListOf<io.nekohasekai.libbox.OutboundGroupItem>()
+            while (message.hasNext()) {
+                outbounds.add(message.next())
+            }
+            cachedOutbounds = outbounds
+            getAllHandlers().forEach { it.updateOutbounds(outbounds) }
         }
 
         override fun setDefaultLogLevel(level: Int) {
