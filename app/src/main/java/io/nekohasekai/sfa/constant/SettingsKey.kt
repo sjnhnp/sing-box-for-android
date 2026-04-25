@@ -34,6 +34,7 @@ object SettingsKey {
     // OOM killer
     const val OOM_KILLER_ENABLED = "oom_killer_enabled"
     const val OOM_KILLER_DISABLED = "oom_killer_disabled"
+    const val OOM_KILLER_DISABLE_REPORTING = "oom_killer_disable_reporting"
     const val OOM_MEMORY_LIMIT_MB = "oom_memory_limit_mb"
 
     // dashboard

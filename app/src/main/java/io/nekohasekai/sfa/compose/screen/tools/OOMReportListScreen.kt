@@ -85,6 +85,7 @@ fun OOMReportListScreen(
     var oomKillerEnabled by remember { mutableStateOf(Settings.oomKillerEnabled) }
     var oomMemoryLimitMB by remember { mutableIntStateOf(Settings.oomMemoryLimitMB) }
     var oomKillerKillConnections by remember { mutableStateOf(!Settings.oomKillerDisabled) }
+    var oomKillerGenerateReport by remember { mutableStateOf(!Settings.oomKillerDisableReporting) }
     var showMemoryLimitDialog by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -343,6 +344,33 @@ fun OOMReportListScreen(
                                                 oomKillerKillConnections = checked
                                                 scope.launch(Dispatchers.IO) {
                                                     Settings.oomKillerDisabled = !checked
+                                                    Application.application.reloadSetupOptions()
+                                                    withContext(Dispatchers.Main) {
+                                                        notifyApplyChange(UiEvent.ApplyServiceChange.Mode.Restart)
+                                                    }
+                                                }
+                                            },
+                                        )
+                                    },
+                                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                                )
+                                ListItem(
+                                    headlineContent = {
+                                        Text(
+                                            stringResource(R.string.oom_report_generate_report),
+                                            style = MaterialTheme.typography.bodyLarge,
+                                        )
+                                    },
+                                    supportingContent = {
+                                        Text(stringResource(R.string.oom_report_generate_report_description))
+                                    },
+                                    trailingContent = {
+                                        Switch(
+                                            checked = oomKillerGenerateReport,
+                                            onCheckedChange = { checked ->
+                                                oomKillerGenerateReport = checked
+                                                scope.launch(Dispatchers.IO) {
+                                                    Settings.oomKillerDisableReporting = !checked
                                                     Application.application.reloadSetupOptions()
                                                     withContext(Dispatchers.Main) {
                                                         notifyApplyChange(UiEvent.ApplyServiceChange.Mode.Restart)

@@ -120,6 +120,7 @@ class Application : Application() {
         it.crashReportSource = "Application"
         it.oomKillerEnabled = Settings.oomKillerEnabled
         it.oomKillerDisabled = Settings.oomKillerDisabled
+        it.oomKillerDisableReporting = Settings.oomKillerDisableReporting
         it.oomMemoryLimit = Settings.oomMemoryLimitMB.toLong() * 1024L * 1024L
     }
 

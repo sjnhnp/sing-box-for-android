@@ -527,8 +527,11 @@
     <string name="oom_report_enable_memory_limit">Enable Memory Limit</string>
     <string name="oom_report_enable_memory_limit_description">Provide a soft memory limit for the service. The service will perform multiple processes to try to stay within this memory limit.</string>
     <string name="oom_report_memory_limit">Memory Limit</string>
-    <string name="oom_report_kill_connections">Kill Connections</string>
-    <string name="oom_report_kill_connections_description">Kill all connections to free memory when the service memory exceeds the limit.</string>
+    <string name="oom_report_kill_connections">Kill connections</string>
+    <string name="oom_report_kill_connections_description">Kill all connections when memory pressure is detected</string>
+    <string name="oom_report_generate_report">Generate report</string>
+    <string name="oom_report_generate_report_description">Automatically generate a diagnostic report when memory pressure is detected</string>
+    <string name="oom_report_empty">No OOM reports</string>
 
     <!-- Xposed Module -->
     <string name="xposed_description">Privileged Enhancement for sing-box</string>

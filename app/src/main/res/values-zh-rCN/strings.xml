@@ -508,8 +508,11 @@
     <string name="oom_report_enable_memory_limit">启用内存限制</string>
     <string name="oom_report_enable_memory_limit_description">为服务提供软内存限制。服务将执行多个进程以尝试保持在此内存限制范围内。</string>
     <string name="oom_report_memory_limit">内存限制</string>
-    <string name="oom_report_kill_connections">终止连接</string>
-    <string name="oom_report_kill_connections_description">当服务内存超出限制时，终止所有连接以释放内存。</string>
+    <string name="oom_report_kill_connections">断开连接</string>
+    <string name="oom_report_kill_connections_description">检测到内存压力时断开所有连接以释放内存</string>
+    <string name="oom_report_generate_report">生成报告</string>
+    <string name="oom_report_generate_report_description">检测到内存压力时自动生成诊断报告</string>
+    <string name="oom_report_empty">暂无报告</string>
 
     <!-- Xposed Module -->
     <string name="xposed_description">sing-box 的特权增强</string>

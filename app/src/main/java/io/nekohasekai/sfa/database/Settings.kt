@@ -108,6 +108,7 @@ object Settings {
 
     var oomKillerEnabled by dataStore.boolean(SettingsKey.OOM_KILLER_ENABLED) { false }
     var oomKillerDisabled by dataStore.boolean(SettingsKey.OOM_KILLER_DISABLED) { true }
+    var oomKillerDisableReporting by dataStore.boolean(SettingsKey.OOM_KILLER_DISABLE_REPORTING) { false }
     var oomMemoryLimitMB by dataStore.int(SettingsKey.OOM_MEMORY_LIMIT_MB) { 50 }
 
     var dashboardItemOrder by dataStore.string(SettingsKey.DASHBOARD_ITEM_ORDER) { "" }
