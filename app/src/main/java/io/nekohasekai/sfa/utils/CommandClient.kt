@@ -206,7 +206,7 @@ open class CommandClient @Inject constructor(
                 }
             options.addCommand(command)
         }
-        options.statusInterval = 1 * 1000 * 1000 * 1000
+        options.statusInterval = 3 * 1000 * 1000 * 1000
         val commandClient = io.nekohasekai.libbox.CommandClient(clientHandler, options)
         try {
             commandClient.connect()

@@ -21,6 +21,12 @@ Your task is to preserve the **Hilt + MVI** state established in `26b1a33` and o
 - **Environment Setting**:
   - `gradle.properties`: We no longer hardcode `org.gradle.java.home` (as per `75766fa`) to ensure CI flexibility. Do not re-add it unless compilation fails locally.
 
+### 2. Performance & UX Optimizations (🆕 Added 2026-04-25)
+These modifications improve battery life and reduce core latency.
+
+- **Status Refresh Throttling**:
+  - `app/src/main/java/io/nekohasekai/sfa/utils/CommandClient.kt`: The `statusInterval` must be set to **3 seconds** (`3 * 1000 * 1000 * 1000`) instead of the default 1 second to reduce background CPU wakeups when the dashboard is open.
+
 ## 🔄 Workflow Steps
 
 1. **Setup & Fetch Upstream**
@@ -44,8 +50,8 @@ Your task is to preserve the **Hilt + MVI** state established in `26b1a33` and o
    - **Check Imports**: Ensure `DashboardViewModel.kt` still has `kotlinx.coroutines.flow.update`.
    - **Check Injection**: Ensure `MainActivity` shows `val viewModel: DashboardViewModel = hiltViewModel()`.
    - **Check Groups**: Ensure `GroupsViewModel` is injected, not manually instantiated.
-
-6. **Verification & Commit**
+    - **检查刷新间隔**: 确保 `CommandClient.kt` 仍使用 3 秒间隔 (`3 * 1000 * 1000 * 1000`)。
+6. **验证与提交**
    - Run compilation check: `./gradlew assembleDebug`
    - Commit message: `Merge upstream/dev: Preserved Hilt/MVI architecture and post-refactor optimizations`
 
