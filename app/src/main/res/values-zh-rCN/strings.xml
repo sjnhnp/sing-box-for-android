@@ -273,8 +273,9 @@
     <string name="check_update_prompt_play">是否启用从 **Play Store** 自动检查更新？</string>
     <string name="check_update_prompt_github">是否启用从 **GitHub** 自动检查更新？</string>
     <string name="update_track">更新轨道</string>
-    <string name="update_track_stable">稳定版</string>
+    <string name="update_track_latest">最新版</string>
     <string name="update_track_beta">Beta 版</string>
+    <string name="update_track_alpha">Alpha 版</string>
     <string name="update_track_not_supported">当前轨道尚不支持检查更新</string>
     <string name="view_release">查看发布</string>
     <string name="downloading">下载中…</string>

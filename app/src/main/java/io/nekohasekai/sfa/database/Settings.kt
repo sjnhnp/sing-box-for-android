@@ -46,10 +46,9 @@ object Settings {
     var updateCheckPrompted by dataStore.boolean(SettingsKey.UPDATE_CHECK_PROMPTED) { false }
     var updateTrack by dataStore.string(SettingsKey.UPDATE_TRACK) {
         val versionName = BuildConfig.VERSION_NAME.lowercase()
-        if (versionName.contains("-alpha") ||
-            versionName.contains("-beta") ||
-            versionName.contains("-rc")
-        ) {
+        if (versionName.contains("-alpha")) {
+            "alpha"
+        } else if (versionName.contains("-beta") || versionName.contains("-rc")) {
             "beta"
         } else {
             "stable"

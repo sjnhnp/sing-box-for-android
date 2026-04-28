@@ -277,8 +277,9 @@
     <string name="update_source_github">GitHub</string>
     <string name="update_source_fdroid">F-Droid</string>
     <string name="update_track">Update Track</string>
-    <string name="update_track_stable">Stable</string>
+    <string name="update_track_latest">Latest</string>
     <string name="update_track_beta">Beta</string>
+    <string name="update_track_alpha">Alpha</string>
     <string name="update_track_not_supported">Current track does not support update checking yet</string>
     <string name="view_release">View Release</string>
     <string name="downloading">Downloading…</string>

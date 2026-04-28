@@ -82,7 +82,8 @@ class GitHubUpdateChecker : Closeable {
         }
         return when (track) {
             UpdateTrack.STABLE -> !release.prerelease
-            UpdateTrack.BETA -> true
+            UpdateTrack.BETA -> !release.tagName.lowercase().contains("alpha")
+            UpdateTrack.ALPHA -> true
         }
     }
 

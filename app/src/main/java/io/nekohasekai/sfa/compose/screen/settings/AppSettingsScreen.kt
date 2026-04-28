@@ -804,8 +804,9 @@ fun AppSettingsScreen(
                                     stringResource(R.string.update_track_stable)
                                 } else {
                                     when (UpdateTrack.fromString(currentTrack)) {
-                                        UpdateTrack.STABLE -> stringResource(R.string.update_track_stable)
+                                        UpdateTrack.STABLE -> stringResource(R.string.update_track_latest)
                                         UpdateTrack.BETA -> stringResource(R.string.update_track_beta)
+                                        UpdateTrack.ALPHA -> stringResource(R.string.update_track_alpha)
                                     }
                                 }
                                 Text(trackName, style = MaterialTheme.typography.bodyMedium)
@@ -1341,8 +1342,9 @@ private fun UpdateTrackDialog(
     onDismiss: () -> Unit,
 ) {
     val tracks = listOf(
-        "stable" to stringResource(R.string.update_track_stable),
+        "stable" to stringResource(R.string.update_track_latest),
         "beta" to stringResource(R.string.update_track_beta),
+        "alpha" to stringResource(R.string.update_track_alpha),
     )
 
     AlertDialog(
