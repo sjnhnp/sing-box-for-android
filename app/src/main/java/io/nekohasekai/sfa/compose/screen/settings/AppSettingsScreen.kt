@@ -801,7 +801,7 @@ fun AppSettingsScreen(
                             },
                             supportingContent = {
                                 val trackName = if (isFDroid) {
-                                    stringResource(R.string.update_track_stable)
+                                    stringResource(R.string.update_track_latest)
                                 } else {
                                     when (UpdateTrack.fromString(currentTrack)) {
                                         UpdateTrack.STABLE -> stringResource(R.string.update_track_latest)
