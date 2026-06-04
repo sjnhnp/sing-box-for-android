@@ -273,9 +273,8 @@
     <string name="check_update_prompt_play">是否启用从 **Play Store** 自动检查更新？</string>
     <string name="check_update_prompt_github">是否启用从 **GitHub** 自动检查更新？</string>
     <string name="update_track">更新轨道</string>
-    <string name="update_track_latest">最新版</string>
+    <string name="update_track_stable">稳定版</string>
     <string name="update_track_beta">Beta 版</string>
-    <string name="update_track_alpha">Alpha 版</string>
     <string name="update_track_not_supported">当前轨道尚不支持检查更新</string>
     <string name="view_release">查看发布</string>
     <string name="downloading">下载中…</string>
@@ -459,6 +458,7 @@
     <string name="tailscale_status">状态</string>
     <string name="tailscale_state">状态</string>
     <string name="tailscale_network">网络</string>
+    <string name="tailscale_hostname">主机名</string>
     <string name="tailscale_open_auth_url">打开认证链接</string>
     <string name="tailscale_open_auth_url_qr_code">显示认证链接二维码</string>
     <string name="tailscale_this_device">此设备</string>
@@ -469,6 +469,40 @@
     <string name="tailscale_key_expiry">密钥过期</string>
     <string name="tailscale_exit_node">出口节点</string>
     <string name="tailscale_active">活跃</string>
+    <string name="tailscale_shared_in">共享至此</string>
+    <string name="tailscale_expired">已过期</string>
+    <string name="tailscale_expires_relative">%1$s过期</string>
+    <string name="tailscale_key_expiry_disabled">密钥过期已禁用</string>
+    <string name="tailscale_last_seen">最后在线</string>
+    <string name="tailscale_available">可用</string>
+    <string name="tailscale_yes">是</string>
+
+    <!-- Tailscale SSH -->
+    <string name="tailscale_ssh_connect">通过 SSH 连接</string>
+    <string name="tailscale_ssh_options">SSH 选项</string>
+    <string name="tailscale_ssh_username">用户名</string>
+    <string name="tailscale_ssh_remember_options">记住 SSH 选项</string>
+    <string name="tailscale_ssh_quick_connect">快速连接</string>
+    <string name="tailscale_ssh_quick_connect_description">启用后，你可以通过工具中 Tailscale 条目和节点列表中节点条目的上下文菜单（长按）快速连接到此节点。\n\n当通过 SSH 连接到其他节点时，此节点也会出现在新建会话菜单中。</string>
+    <string name="tailscale_ssh_terminal_hint">你可以在设置 → Termux 配置中自定义终端外观。</string>
+    <string name="tailscale_ssh_connect_button">连接</string>
+    <string name="tailscale_ssh_connecting">连接中…</string>
+    <string name="tailscale_ssh_no_sessions">无活动会话</string>
+    <string name="tailscale_ssh_new_session">新建会话</string>
+
+    <!-- Terminal Configuration -->
+    <string name="tailscale_terminal_config">Termux 配置</string>
+    <string name="tailscale_terminal_color_theme">颜色主题</string>
+    <string name="tailscale_terminal_light_theme">浅色主题</string>
+    <string name="tailscale_terminal_dark_theme">深色主题</string>
+    <string name="tailscale_terminal_font_config">字体</string>
+    <string name="tailscale_terminal_font">字体</string>
+    <string name="tailscale_terminal_font_size">字号</string>
+    <string name="tailscale_terminal_font_default">默认</string>
+    <string name="tailscale_terminal_font_system">系统字体</string>
+    <string name="tailscale_terminal_font_imported">已导入的字体</string>
+    <string name="tailscale_terminal_import_font">从文件导入</string>
+    <string name="tailscale_terminal_search_themes">搜索主题</string>
 
     <string name="stun_test">STUN 测试</string>
     <string name="stun_server">服务器</string>
@@ -509,11 +543,8 @@
     <string name="oom_report_enable_memory_limit">启用内存限制</string>
     <string name="oom_report_enable_memory_limit_description">为服务提供软内存限制。服务将执行多个进程以尝试保持在此内存限制范围内。</string>
     <string name="oom_report_memory_limit">内存限制</string>
-    <string name="oom_report_kill_connections">断开连接</string>
-    <string name="oom_report_kill_connections_description">检测到内存压力时断开所有连接以释放内存</string>
-    <string name="oom_report_generate_report">生成报告</string>
-    <string name="oom_report_generate_report_description">检测到内存压力时自动生成诊断报告</string>
-    <string name="oom_report_empty">暂无报告</string>
+    <string name="oom_report_kill_connections">终止连接</string>
+    <string name="oom_report_kill_connections_description">当服务内存超出限制时，终止所有连接以释放内存。</string>
 
     <!-- Xposed Module -->
     <string name="xposed_description">sing-box 的特权增强</string>

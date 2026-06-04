@@ -68,6 +68,9 @@ open class CommandClient @Inject constructor(
                 cachedGroups?.let { groups ->
                     handler.updateGroups(groups)
                 }
+                cachedOutbounds?.let { outbounds ->
+                    handler.updateOutbounds(outbounds)
+                }
             }
         }
         if (activeHandlers.contains(handler)) {

@@ -117,6 +117,7 @@ import io.nekohasekai.sfa.compose.screen.dashboard.DashboardViewModel
 import io.nekohasekai.sfa.compose.screen.dashboard.GroupsCard
 import io.nekohasekai.sfa.compose.screen.dashboard.groups.GroupsViewModel
 import io.nekohasekai.sfa.compose.screen.log.LogViewModel
+import io.nekohasekai.sfa.compose.screen.tools.TailscaleSSHSharedViewModel
 import io.nekohasekai.sfa.compose.screen.tools.TailscaleStatusViewModel
 import io.nekohasekai.sfa.compose.theme.SFATheme
 import io.nekohasekai.sfa.compose.topbar.LocalTopBarController
@@ -754,6 +755,16 @@ class MainActivity :
                 null
             }
 
+        val tailscaleSSHSharedViewModel: TailscaleSSHSharedViewModel = viewModel()
+
+        val isToolsRoute = currentRootRoute == Screen.Tools.route
+        val tailscaleStatusViewModel: TailscaleStatusViewModel? =
+            if (isToolsRoute) {
+                viewModel()
+            } else {
+                null
+            }
+
         val showGroupsInNav = dashboardUiState.hasGroups
         val showConnectionsInNav =
             currentServiceStatus == Status.Started || currentServiceStatus == Status.Starting
@@ -869,6 +880,7 @@ class MainActivity :
                     groupsViewModel = groupsViewModel,
                     connectionsViewModel = connectionsViewModel,
                     tailscaleStatusViewModel = tailscaleStatusViewModel,
+                    tailscaleSSHSharedViewModel = tailscaleSSHSharedViewModel,
                     modifier = Modifier.fillMaxSize(),
                 )
                 if (!useNavigationRail) {

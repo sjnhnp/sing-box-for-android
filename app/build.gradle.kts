@@ -162,6 +162,10 @@ android {
         }
     }
 
+    lint {
+        fatal += "NewApi"
+    }
+
     applicationVariants.configureEach {
         outputs.configureEach {
             val output = this as com.android.build.gradle.internal.api.BaseVariantOutputImpl
@@ -321,12 +325,19 @@ dependencies {
     // Debug/Test dependencies
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
+    "androidTestPlayImplementation"(composeBom23)
+    "androidTestOtherImplementation"(composeBom23)
+    "androidTestOtherLegacyImplementation"(composeBom21)
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
 
     // Common Compose-related libraries
     implementation("sh.calvin.reorderable:reorderable:3.0.0")
     implementation("com.github.jeziellago:compose-markdown:0.5.8")
     implementation("org.kodein.emoji:emoji-kt:2.3.0")
+
+    // Terminal emulator
+    implementation(project(":terminal-emulator"))
+    implementation(project(":terminal-view"))
 
     // Xposed API for self-hooking VPN hide module
     compileOnly("de.robv.android.xposed:api:82")

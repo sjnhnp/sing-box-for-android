@@ -11,7 +11,6 @@ import android.net.wifi.WifiManager
 import android.os.PowerManager
 import android.util.Log
 import androidx.core.content.getSystemService
-import go.Seq
 import io.nekohasekai.libbox.Libbox
 import io.nekohasekai.libbox.SetupOptions
 import io.nekohasekai.sfa.bg.AppChangeReceiver
@@ -85,7 +84,6 @@ class Application : Application() {
 
     private fun initialize(baseDir: File, workingDir: File?, tempDir: File) {
         val actualWorkingDir = workingDir ?: return
-
         val currentMajorVersion = BuildConfig.VERSION_NAME.split(".").firstOrNull()?.toIntOrNull() ?: 0
         val lastMajorVersion = Settings.lastExecutedMajorVersion
 
@@ -100,7 +98,7 @@ class Application : Application() {
         }
         Settings.lastExecutedMajorVersion = currentMajorVersion
 
-        Libbox.setup(createSetupOptions(baseDir, actualWorkingDir, tempDir))
+        setupLibbox(baseDir, actualWorkingDir, tempDir)
     }
 
     fun reloadSetupOptions() {
@@ -110,6 +108,9 @@ class Application : Application() {
         Libbox.reloadSetupOptions(createSetupOptions(baseDir, workingDir, tempDir))
     }
 
+    private fun setupLibbox(baseDir: File, workingDir: File, tempDir: File) {
+        Libbox.setup(createSetupOptions(baseDir, workingDir, tempDir))
+    }
     private fun createSetupOptions(baseDir: File, workingDir: File, tempDir: File): SetupOptions = SetupOptions().also {
         it.basePath = baseDir.path
         it.workingPath = workingDir.path

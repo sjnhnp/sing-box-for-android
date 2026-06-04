@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.content.Intent
 import android.content.ServiceConnection
 import android.content.pm.PackageInfo
+import android.os.Build
 import android.os.IBinder
 import android.os.RemoteException
 import androidx.core.content.ContextCompat
@@ -130,7 +131,7 @@ object RootClient {
             val list = slice.list as List<PackageInfo>
             list
         } catch (e: RemoteException) {
-            throw e.rethrowFromSystemServer()
+            throw e.rethrowAsRuntime()
         }
     }
 
@@ -139,7 +140,32 @@ object RootClient {
         try {
             svc.registerNeighborTableCallback(callback)
         } catch (e: RemoteException) {
-            throw e.rethrowFromSystemServer()
+            throw e.rethrowAsRuntime()
+        }
+    }
+
+    suspend fun lookupSFTPServer(): String {
+        val svc = bindService()
+        try {
+            return svc.lookupSFTPServer()
+        } catch (e: RemoteException) {
+            throw e.rethrowAsRuntime()
+        }
+    }
+
+    suspend fun openShellSession(
+        user: String,
+        command: String?,
+        env: Array<String>,
+        term: String?,
+        rows: Int,
+        cols: Int,
+    ): IRootShellSession {
+        val svc = bindService()
+        try {
+            return svc.openShellSession(user, command, env, term, rows, cols)
+        } catch (e: RemoteException) {
+            throw e.rethrowAsRuntime()
         }
     }
 
@@ -147,7 +173,13 @@ object RootClient {
         try {
             service?.unregisterNeighborTableCallback(callback)
         } catch (e: RemoteException) {
-            throw e.rethrowFromSystemServer()
+            throw e.rethrowAsRuntime()
         }
+    }
+
+    private fun RemoteException.rethrowAsRuntime(): RuntimeException = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+        rethrowFromSystemServer()
+    } else {
+        RuntimeException(this)
     }
 }

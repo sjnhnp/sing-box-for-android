@@ -2,6 +2,7 @@ package io.nekohasekai.sfa.compose.screen.tools
 
 import android.text.format.DateUtils
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -20,15 +21,20 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -46,7 +52,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.lerp
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -71,7 +76,8 @@ fun TailscalePeerScreen(
 ) {
     val state by viewModel.uiState.collectAsState()
     val peer = viewModel.peer(endpointTag, peerId)
-    val isSelf = viewModel.endpoint(endpointTag)?.selfPeer?.id == peerId
+    val endpoint = viewModel.endpoint(endpointTag)
+    val isSelf = endpoint?.selfPeer?.id == peerId
     val pingViewModel: TailscalePingViewModel = viewModel()
     val pingState by pingViewModel.uiState.collectAsState()
 
@@ -88,7 +94,7 @@ fun TailscalePeerScreen(
             title = {
                 Column {
                     Text(
-                        peer?.hostName ?: "",
+                        peer?.displayName ?: "",
                         style = MaterialTheme.typography.titleMedium,
                     )
                     Row(
@@ -139,6 +145,60 @@ fun TailscalePeerScreen(
             .verticalScroll(rememberScrollState())
             .padding(vertical = 8.dp),
     ) {
+        // Network section (self peer only): network name + logout
+        val networkName = endpoint?.networkName
+        val showLogout = isSelf && endpoint?.backendState == "Running" && endpoint?.keyAuth == false
+        if (isSelf && (!networkName.isNullOrEmpty() || showLogout)) {
+            SectionHeader(stringResource(R.string.tailscale_network))
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                ),
+            ) {
+                Column {
+                    if (!networkName.isNullOrEmpty()) {
+                        Column(
+                            modifier = Modifier.padding(16.dp),
+                            verticalArrangement = Arrangement.spacedBy(12.dp),
+                        ) {
+                            AddressRow(
+                                address = networkName,
+                                label = stringResource(R.string.tailscale_network),
+                                copied = copiedAddress,
+                                onCopy = { copiedAddress = it },
+                            )
+                        }
+                    }
+                    if (showLogout) {
+                        ListItem(
+                            headlineContent = {
+                                Text(
+                                    stringResource(R.string.tailscale_logout),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.error,
+                                )
+                            },
+                            leadingContent = {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.Logout,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.error,
+                                )
+                            },
+                            modifier = Modifier.clickable {
+                                viewModel.logout(endpointTag)
+                            },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                        )
+                    }
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+        }
+
         // Tailscale Addresses section
         SectionHeader(stringResource(R.string.tailscale_addresses))
         Card(
@@ -157,6 +217,14 @@ fun TailscalePeerScreen(
                     AddressRow(
                         address = Libbox.formatFQDN(peer.dnsName),
                         label = stringResource(R.string.tailscale_magic_dns),
+                        copied = copiedAddress,
+                        onCopy = { copiedAddress = it },
+                    )
+                }
+                if (peer.hostName.isNotEmpty()) {
+                    AddressRow(
+                        address = peer.hostName,
+                        label = stringResource(R.string.tailscale_hostname),
                         copied = copiedAddress,
                         onCopy = { copiedAddress = it },
                     )
@@ -329,10 +397,96 @@ fun TailscalePeerScreen(
         }
 
         // Details section
-        val showDetails = peer.keyExpiry > 0 || peer.os.isNotEmpty() || peer.exitNode
-        if (showDetails) {
+        Spacer(modifier = Modifier.height(16.dp))
+        SectionHeader(stringResource(R.string.tailscale_details))
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+            ),
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                when {
+                    peer.expired -> {
+                        DetailRow(
+                            label = stringResource(R.string.tailscale_key_expiry),
+                            value = stringResource(R.string.tailscale_expired),
+                            valueColor = MaterialTheme.colorScheme.error,
+                        )
+                    }
+                    peer.keyExpiry > 0 -> {
+                        val expiryText = DateUtils.getRelativeTimeSpanString(
+                            peer.keyExpiry * 1000,
+                            System.currentTimeMillis(),
+                            DateUtils.MINUTE_IN_MILLIS,
+                            0,
+                        ).toString()
+                        DetailRow(
+                            label = stringResource(R.string.tailscale_key_expiry),
+                            value = expiryText,
+                        )
+                    }
+                    else -> {
+                        DetailRow(
+                            label = stringResource(R.string.tailscale_key_expiry),
+                            value = stringResource(R.string.disabled),
+                            valueColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                if (peer.os.isNotEmpty()) {
+                    DetailRow(
+                        label = stringResource(R.string.tailscale_os),
+                        value = peer.os,
+                    )
+                }
+                if (!peer.online && peer.lastSeen > 0) {
+                    val lastSeenText = DateUtils.getRelativeTimeSpanString(
+                        peer.lastSeen * 1000,
+                        System.currentTimeMillis(),
+                        DateUtils.MINUTE_IN_MILLIS,
+                        0,
+                    ).toString()
+                    DetailRow(
+                        label = stringResource(R.string.tailscale_last_seen),
+                        value = lastSeenText,
+                    )
+                }
+                if (peer.exitNode) {
+                    DetailRow(
+                        label = stringResource(R.string.tailscale_exit_node),
+                        value = stringResource(R.string.tailscale_active),
+                    )
+                } else if (peer.exitNodeOption) {
+                    DetailRow(
+                        label = stringResource(R.string.tailscale_exit_node),
+                        value = stringResource(R.string.tailscale_available),
+                    )
+                }
+                if (peer.shareeNode) {
+                    DetailRow(
+                        label = stringResource(R.string.tailscale_shared_in),
+                        value = stringResource(R.string.tailscale_yes),
+                    )
+                }
+                if (peer.sshHostKeys.isNotEmpty()) {
+                    if (!peer.online || isSelf || peer.tailscaleIPs.isEmpty()) {
+                        DetailRow(
+                            label = stringResource(R.string.tailscale_ssh),
+                            value = stringResource(R.string.tailscale_available),
+                        )
+                    }
+                }
+            }
+        }
+
+        if (peer.sshHostKeys.isNotEmpty() && peer.online && !isSelf && peer.tailscaleIPs.isNotEmpty()) {
             Spacer(modifier = Modifier.height(16.dp))
-            SectionHeader(stringResource(R.string.tailscale_details))
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -341,35 +495,37 @@ fun TailscalePeerScreen(
                     containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
                 ),
             ) {
-                val context = LocalContext.current
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    if (peer.keyExpiry > 0) {
-                        val expiryText = DateUtils.getRelativeTimeSpanString(
-                            peer.keyExpiry * 1000,
-                            System.currentTimeMillis(),
-                            DateUtils.MINUTE_IN_MILLIS,
-                        ).toString()
-                        DetailRow(
-                            label = stringResource(R.string.tailscale_key_expiry),
-                            value = expiryText,
+                ListItem(
+                    headlineContent = {
+                        Text(
+                            stringResource(R.string.tailscale_ssh_connect),
+                            style = MaterialTheme.typography.bodyMedium,
                         )
-                    }
-                    if (peer.os.isNotEmpty()) {
-                        DetailRow(
-                            label = stringResource(R.string.tailscale_os),
-                            value = peer.os,
+                    },
+                    leadingContent = {
+                        Icon(
+                            imageVector = Icons.Default.Terminal,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
                         )
-                    }
-                    if (peer.exitNode) {
-                        DetailRow(
-                            label = stringResource(R.string.tailscale_exit_node),
-                            value = stringResource(R.string.tailscale_active),
+                    },
+                    trailingContent = {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(16.dp),
                         )
-                    }
-                }
+                    },
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(12.dp))
+                        .clickable {
+                            navController.navigate(
+                                "tools/tailscale/${android.net.Uri.encode(endpointTag)}/peer/${android.net.Uri.encode(peerId)}/ssh",
+                            )
+                        },
+                    colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                )
             }
         }
 
@@ -395,7 +551,7 @@ private fun SectionHeader(title: String) {
 }
 
 @Composable
-private fun DetailRow(label: String, value: String) {
+private fun DetailRow(label: String, value: String, valueColor: Color? = null) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -410,7 +566,7 @@ private fun DetailRow(label: String, value: String) {
         Text(
             text = value,
             style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
-            color = MaterialTheme.colorScheme.onSurface,
+            color = valueColor ?: MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.End,
         )
     }

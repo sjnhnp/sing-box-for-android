@@ -60,7 +60,6 @@
     <string name="title_connections">Connections</string>
     <string name="title_others">Others</string>
     <string name="title_scan_result">Scan Result</string>
-    <string name="total">Total</string>
 
     <!-- Status -->
     <string name="status_default">Service not started</string>
@@ -277,9 +276,8 @@
     <string name="update_source_github">GitHub</string>
     <string name="update_source_fdroid">F-Droid</string>
     <string name="update_track">Update Track</string>
-    <string name="update_track_latest">Latest</string>
+    <string name="update_track_stable">Stable</string>
     <string name="update_track_beta">Beta</string>
-    <string name="update_track_alpha">Alpha</string>
     <string name="update_track_not_supported">Current track does not support update checking yet</string>
     <string name="view_release">View Release</string>
     <string name="downloading">Downloading…</string>
@@ -416,10 +414,6 @@
     <!-- Search -->
     <string name="search_placeholder">Find in document</string>
 
-    <!-- Performance Warnings -->
-    <string name="large_file_warning_title">Large File</string>
-    <string name="large_file_warning_message">This file is %d KB. Editing large files may affect performance.</string>
-
     <!-- Content Descriptions (Accessibility) -->
     <string name="content_description_back">Back</string>
     <string name="content_description_scroll_to_bottom">Scroll to bottom</string>
@@ -469,9 +463,11 @@
     <string name="tailscale_state">State</string>
     <string name="tailscale_network">Network</string>
     <string name="tailscale_magic_dns" translatable="false">MagicDNS</string>
+    <string name="tailscale_hostname">Hostname</string>
     <string name="tailscale_open_auth_url">Open Auth URL</string>
     <string name="tailscale_open_auth_url_qr_code">Show Auth URL QR Code</string>
     <string name="tailscale_this_device">This Device</string>
+    <string name="tailscale_logout">Log out</string>
     <string name="tailscale_connected">Connected</string>
     <string name="tailscale_not_connected">Not Connected</string>
     <string name="tailscale_addresses">Tailscale Addresses</string>
@@ -487,6 +483,41 @@
     <string name="tailscale_ping_stop">Stop</string>
     <string name="tailscale_ping_direct">Direct connection</string>
     <string name="tailscale_ping_derp">DERP-relayed connection</string>
+    <string name="tailscale_shared_in">Shared in</string>
+    <string name="tailscale_expired">Expired</string>
+    <string name="tailscale_expires_relative">Expires %1$s</string>
+    <string name="tailscale_key_expiry_disabled">Key expiry disabled</string>
+    <string name="tailscale_last_seen">Last Seen</string>
+    <string name="tailscale_ssh" translatable="false">SSH</string>
+    <string name="tailscale_available">Available</string>
+    <string name="tailscale_yes">Yes</string>
+
+    <!-- Tailscale SSH -->
+    <string name="tailscale_ssh_connect">Connect via SSH</string>
+    <string name="tailscale_ssh_options">SSH Options</string>
+    <string name="tailscale_ssh_username">Username</string>
+    <string name="tailscale_ssh_remember_options">Remember SSH Options</string>
+    <string name="tailscale_ssh_quick_connect">Quick Connect</string>
+    <string name="tailscale_ssh_quick_connect_description">If enabled, you can quickly connect to this peer via the context menu (long press) on the Tailscale entry in Tools and on peer entries in the peer list.\n\nThis peer will also appear in the New Session menu when connected to other peers via SSH.</string>
+    <string name="tailscale_ssh_terminal_hint">You can customize the terminal appearance in Settings → Termux Configuration.</string>
+    <string name="tailscale_ssh_connect_button">Connect</string>
+    <string name="tailscale_ssh_connecting">Connecting…</string>
+    <string name="tailscale_ssh_no_sessions">No active sessions</string>
+    <string name="tailscale_ssh_new_session">New session</string>
+
+    <!-- Terminal Configuration -->
+    <string name="tailscale_terminal_config">Termux Configuration</string>
+    <string name="tailscale_terminal_color_theme">Color Theme</string>
+    <string name="tailscale_terminal_light_theme">Light Theme</string>
+    <string name="tailscale_terminal_dark_theme">Dark Theme</string>
+    <string name="tailscale_terminal_font_config">Font</string>
+    <string name="tailscale_terminal_font">Font Family</string>
+    <string name="tailscale_terminal_font_size">Font Size</string>
+    <string name="tailscale_terminal_font_default">Default</string>
+    <string name="tailscale_terminal_font_system">System Fonts</string>
+    <string name="tailscale_terminal_font_imported">Imported Fonts</string>
+    <string name="tailscale_terminal_import_font">Import from File</string>
+    <string name="tailscale_terminal_search_themes">Search themes</string>
 
     <!-- STUN Test -->
     <string name="stun_test">STUN Test</string>
@@ -528,11 +559,8 @@
     <string name="oom_report_enable_memory_limit">Enable Memory Limit</string>
     <string name="oom_report_enable_memory_limit_description">Provide a soft memory limit for the service. The service will perform multiple processes to try to stay within this memory limit.</string>
     <string name="oom_report_memory_limit">Memory Limit</string>
-    <string name="oom_report_kill_connections">Kill connections</string>
-    <string name="oom_report_kill_connections_description">Kill all connections when memory pressure is detected</string>
-    <string name="oom_report_generate_report">Generate report</string>
-    <string name="oom_report_generate_report_description">Automatically generate a diagnostic report when memory pressure is detected</string>
-    <string name="oom_report_empty">No OOM reports</string>
+    <string name="oom_report_kill_connections">Kill Connections</string>
+    <string name="oom_report_kill_connections_description">Kill all connections to free memory when the service memory exceeds the limit.</string>
 
     <!-- Xposed Module -->
     <string name="xposed_description">Privileged Enhancement for sing-box</string>
