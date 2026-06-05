@@ -598,4 +598,9 @@
     <string name="privilege_module_restart_notification_title">Reboot required</string>
     <string name="privilege_module_restart_notification_message">LSPosed module updated. Reboot to apply changes.</string>
     <string name="privilege_module_restart_channel">LSPosed Module</string>
+    <string name="total">Total</string>
+    <string name="large_file_warning_title">Large File Warning</string>
+    <string name="large_file_warning_message">This file is very large (%1$d KB). Editing it might be slow or laggy.</string>
+    <string name="update_track_latest">Latest</string>
+    <string name="update_track_alpha">Alpha</string>
 </resources>

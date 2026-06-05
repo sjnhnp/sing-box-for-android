@@ -581,4 +581,9 @@
     <string name="lsposed_module_pending_update">LSPosed 模块待更新</string>
     <string name="lsposed_module_pending_downgrade">LSPosed 模块待降级</string>
     <string name="lsposed_module_not_activated">LSPosed 模块未激活</string>
+    <string name="total">累计</string>
+    <string name="large_file_warning_title">文件过大警告</string>
+    <string name="large_file_warning_message">此文件非常大（%1$d KB）。编辑它可能会导致卡顿或延迟。</string>
+    <string name="update_track_latest">最新版</string>
+    <string name="update_track_alpha">Alpha 版</string>
 </resources>
