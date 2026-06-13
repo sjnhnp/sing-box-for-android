@@ -306,7 +306,6 @@ interface PlatformInterfaceWrapper : PlatformInterface {
         return platformUser
     }
 
-
     override fun registerMyInterface(name: String?) {
     }
 
@@ -340,7 +339,6 @@ interface PlatformInterfaceWrapper : PlatformInterface {
             rootSession.close()
         }
     }
-
 
     private class NeighborEntryArray(private val iterator: Iterator<LibboxNeighborEntry>) : NeighborEntryIterator {
         override fun hasNext(): Boolean = iterator.hasNext()

@@ -15,7 +15,10 @@ import io.nekohasekai.libbox.StatusMessage
 import io.nekohasekai.libbox.StringIterator
 import io.nekohasekai.sfa.ktx.toList
 import kotlinx.coroutines.CoroutineScope
-
+import kotlinx.coroutines.DelicateCoroutinesApi
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import io.nekohasekai.sfa.di.ApplicationScope
 import java.util.Collections
 import javax.inject.Inject
@@ -25,41 +28,38 @@ import javax.inject.Singleton
 open class CommandClient @Inject constructor(
     @ApplicationScope private val scope: CoroutineScope,
 ) {
+    private var localOnly: Boolean = false
+
     // Shared state for the singleton instance
     private val handlerTypes = Collections.synchronizedMap(mutableMapOf<Handler, Set<ConnectionType>>())
     private val activeHandlers = Collections.synchronizedSet(mutableSetOf<Any>())
     private var anonymousTypes = emptySet<ConnectionType>()
     private var currentRunningTypes = emptySet<ConnectionType>()
     private var isInternalReconnecting = false
+    private var lastConnectedRemoteServerId: Long? = null
 
-    // Secondary constructor for manual management or legacy code
-    constructor(scope: CoroutineScope, connectionType: ConnectionType, handler: Handler) : this(scope) {
-        this.addHandler(handler, setOf(connectionType))
-    }
-
-    constructor(scope: CoroutineScope, connectionTypes: List<ConnectionType>, handler: Handler) : this(scope) {
+    // Secondary constructors for manual management or legacy/localOnly code
+    constructor(
+        scope: CoroutineScope,
+        connectionTypes: List<ConnectionType>,
+        handler: Handler,
+        localOnly: Boolean = false
+    ) : this(scope) {
+        this.localOnly = localOnly
         this.addHandler(handler, connectionTypes.toSet())
     }
+
+    constructor(
+        scope: CoroutineScope,
+        connectionType: ConnectionType,
+        handler: Handler,
+        localOnly: Boolean = false
+    ) : this(scope, listOf(connectionType), handler, localOnly)
 
     private val additionalHandlers = Collections.synchronizedList(mutableListOf<Handler>())
     private var cachedGroups: MutableList<OutboundGroup>? = null
     private var cachedOutbounds: List<io.nekohasekai.libbox.OutboundGroupItem>? = null
 
-    /**
-     * Set types for this client. 
-     * If using the singleton instance, it's recommended to use addHandler(handler, types) instead.
-     */
-    fun setTypes(types: List<ConnectionType>) {
-        anonymousTypes = types.toSet()
-        if (activeHandlers.contains(this) || activeHandlers.isEmpty()) {
-            // If already active or no handlers yet (legacy behavior), we'll use these types on next update
-            syncConnection()
-        }
-    }
-
-    /**
-     * Add a handler with its required connection types.
-     */
     fun addHandler(handler: Handler, types: Set<ConnectionType>) {
         handlerTypes[handler] = types
         synchronized(additionalHandlers) {
@@ -78,9 +78,6 @@ open class CommandClient @Inject constructor(
         }
     }
 
-    /**
-     * Add a handler using default types (legacy support).
-     */
     fun addHandler(handler: Handler) {
         synchronized(additionalHandlers) {
             if (!additionalHandlers.contains(handler)) {
@@ -118,9 +115,19 @@ open class CommandClient @Inject constructor(
         Outbounds,
     }
 
+    enum class ConnectionErrorKind {
+        // A connect attempt failed; retrying is not expected to succeed.
+        ConnectFailed,
+
+        // An established connection dropped (app suspension, network change,
+        // server restart); reconnecting may recover.
+        ConnectionLost,
+    }
+
     interface Handler {
         fun onConnected() {}
         fun onDisconnected() {}
+        fun onConnectionError(kind: ConnectionErrorKind, message: String) {}
         fun updateStatus(status: StatusMessage) {}
         fun setDefaultLogLevel(level: Int) {}
         fun clearLogs() {}
@@ -132,28 +139,37 @@ open class CommandClient @Inject constructor(
         fun writeConnectionEvents(events: ConnectionEvents) {}
     }
 
+    private val access = Any()
+    private var connectionEpoch = 0
     private var commandClient: io.nekohasekai.libbox.CommandClient? = null
-    private val clientHandler = ClientHandler()
 
-    /**
-     * Request a connection. If the socket is already open, it remains open.
-     * If types need to be updated, it will reconnect.
-     * @param requester The object requesting the connection (usually 'this' in ViewModels).
-     */
+    fun setTypes(types: List<ConnectionType>) {
+        anonymousTypes = types.toSet()
+        if (activeHandlers.contains(this) || activeHandlers.isEmpty()) {
+            syncConnection()
+        }
+    }
+
     fun connect(requester: Any = this) {
         if (activeHandlers.add(requester)) {
             syncConnection()
         }
     }
 
-    /**
-     * Release a connection request. If this was the last requester, the socket is closed.
-     * @param requester The object that previously requested the connection.
-     */
     fun disconnect(requester: Any = this) {
         if (activeHandlers.remove(requester)) {
             syncConnection()
         }
+    }
+
+    // This is for local non-injected callers who want to call connect() directly
+    fun connect() {
+        connect(this)
+    }
+
+    // This is for local non-injected callers who want to call disconnect() directly
+    fun disconnect() {
+        disconnect(this)
     }
 
     private fun syncConnection() {
@@ -163,7 +179,6 @@ open class CommandClient @Inject constructor(
             return
         }
 
-        // Calculate union of all requested types
         val neededTypes = mutableSetOf<ConnectionType>()
         activeHandlers.forEach { requester ->
             if (requester is Handler) {
@@ -174,7 +189,6 @@ open class CommandClient @Inject constructor(
             neededTypes.addAll(anonymousTypes)
         }
         
-        // If no types specified yet but we want to connect, use what we have or just Status as default
         if (neededTypes.isEmpty()) {
             if (anonymousTypes.isNotEmpty()) {
                 neededTypes.addAll(anonymousTypes)
@@ -183,56 +197,124 @@ open class CommandClient @Inject constructor(
             }
         }
 
-        if (commandClient == null || neededTypes != currentRunningTypes) {
-            connectInternal(neededTypes)
+        val remoteServer = if (localOnly) null else CommandTarget.remoteServer
+        val remoteServerId = remoteServer?.id
+
+        if (commandClient == null || neededTypes != currentRunningTypes || remoteServerId != lastConnectedRemoteServerId) {
+            connectInternal(neededTypes, remoteServer)
         }
     }
 
-    private fun connectInternal(types: Set<ConnectionType>) {
-        val wasConnected = commandClient != null
-        if (wasConnected) {
-            isInternalReconnecting = true
-            disconnectInternal()
+    private fun connectInternal(types: Set<ConnectionType>, remoteServer: io.nekohasekai.sfa.database.RemoteServer?) {
+        val epoch: Int
+        val previousClient: io.nekohasekai.libbox.CommandClient?
+        synchronized(access) {
+            epoch = ++connectionEpoch
+            previousClient = commandClient
+            commandClient = null
+        }
+
+        isInternalReconnecting = previousClient != null
+        if (previousClient != null) {
+            if (!isInternalReconnecting) {
+                getAllHandlers().forEach { it.onDisconnected() }
+            }
         }
 
         currentRunningTypes = types
-        val options = CommandClientOptions()
-        types.forEach { connectionType ->
-            val command =
-                when (connectionType) {
-                    ConnectionType.Status -> Libbox.CommandStatus
-                    ConnectionType.Groups -> Libbox.CommandGroup
-                    ConnectionType.Log -> Libbox.CommandLog
-                    ConnectionType.ClashMode -> Libbox.CommandClashMode
-                    ConnectionType.Connections -> Libbox.CommandConnections
-                    ConnectionType.Outbounds -> Libbox.CommandOutbounds
+        lastConnectedRemoteServerId = remoteServer?.id
+
+        scope.launch(Dispatchers.IO) {
+            previousClient?.apply {
+                runCatching {
+                    disconnect()
                 }
-            options.addCommand(command)
+            }
+
+            val options = CommandClientOptions()
+            types.forEach { connectionType ->
+                val command =
+                    when (connectionType) {
+                        ConnectionType.Status -> Libbox.CommandStatus
+                        ConnectionType.Groups -> Libbox.CommandGroup
+                        ConnectionType.Log -> Libbox.CommandLog
+                        ConnectionType.ClashMode -> Libbox.CommandClashMode
+                        ConnectionType.Connections -> Libbox.CommandConnections
+                        ConnectionType.Outbounds -> Libbox.CommandOutbounds
+                    }
+                options.addCommand(command)
+            }
+            options.statusInterval = 3 * 1000 * 1000 * 1000 // 3 seconds custom optimization
+
+            val newClient: io.nekohasekai.libbox.CommandClient
+            try {
+                newClient = if (remoteServer != null) {
+                    Libbox.newRemoteCommandClient(
+                        ClientHandler(epoch),
+                        options,
+                        CommandTarget.libboxOptions(remoteServer)
+                    )
+                } else {
+                    io.nekohasekai.libbox.CommandClient(ClientHandler(epoch), options)
+                }
+                newClient.connect()
+            } catch (e: Exception) {
+                Log.d("CommandClient", "connect failed", e)
+                if (isActiveEpoch(epoch)) {
+                    getAllHandlers().forEach {
+                        it.onConnectionError(
+                            ConnectionErrorKind.ConnectFailed,
+                            e.message ?: e.toString()
+                        )
+                    }
+                }
+                return@launch
+            }
+
+            val stale = synchronized(access) {
+                if (epoch != connectionEpoch) {
+                    true
+                } else {
+                    commandClient = newClient
+                    false
+                }
+            }
+
+            if (stale) {
+                runCatching {
+                    newClient.disconnect()
+                }
+            }
+            isInternalReconnecting = false
         }
-        options.statusInterval = 3 * 1000 * 1000 * 1000
-        val commandClient = io.nekohasekai.libbox.CommandClient(clientHandler, options)
-        try {
-            commandClient.connect()
-        } catch (e: Exception) {
-            Log.d("CommandClient", "connect failed", e)
-            return
-        }
-        this.commandClient = commandClient
-        
-        isInternalReconnecting = false
     }
 
+    @OptIn(DelicateCoroutinesApi::class)
     private fun disconnectInternal() {
-        commandClient?.apply {
-            runCatching {
-                disconnect()
+        val client: io.nekohasekai.libbox.CommandClient?
+        synchronized(access) {
+            connectionEpoch++
+            client = commandClient
+            commandClient = null
+        }
+        lastConnectedRemoteServerId = null
+        if (client != null) {
+            if (!isInternalReconnecting) {
+                getAllHandlers().forEach { it.onDisconnected() }
+            }
+            GlobalScope.launch(Dispatchers.IO) {
+                runCatching {
+                    client.disconnect()
+                }
             }
         }
-        commandClient = null
     }
 
-    private inner class ClientHandler : CommandClientHandler {
+    private fun isActiveEpoch(epoch: Int): Boolean = synchronized(access) { epoch == connectionEpoch }
+
+    private inner class ClientHandler(private val epoch: Int) : CommandClientHandler {
         override fun connected() {
+            if (!isActiveEpoch(epoch)) return
             if (!isInternalReconnecting) {
                 getAllHandlers().forEach { it.onConnected() }
             }
@@ -240,14 +322,20 @@ open class CommandClient @Inject constructor(
         }
 
         override fun disconnected(message: String?) {
+            if (!isActiveEpoch(epoch)) return
             if (!isInternalReconnecting) {
                 getAllHandlers().forEach { it.onDisconnected() }
+            }
+            if (message != null) {
+                getAllHandlers().forEach {
+                    it.onConnectionError(ConnectionErrorKind.ConnectionLost, message)
+                }
             }
             Log.d("CommandClient", "disconnected: $message")
         }
 
         override fun writeGroups(message: OutboundGroupIterator?) {
-            if (message == null) return
+            if (message == null || !isActiveEpoch(epoch)) return
             val groups = mutableListOf<OutboundGroup>()
             while (message.hasNext()) {
                 groups.add(message.next())
@@ -257,9 +345,7 @@ open class CommandClient @Inject constructor(
         }
 
         override fun writeOutbounds(message: OutboundGroupItemIterator?) {
-            if (message == null) {
-                return
-            }
+            if (message == null || !isActiveEpoch(epoch)) return
             val outbounds = mutableListOf<io.nekohasekai.libbox.OutboundGroupItem>()
             while (message.hasNext()) {
                 outbounds.add(message.next())
@@ -269,36 +355,40 @@ open class CommandClient @Inject constructor(
         }
 
         override fun setDefaultLogLevel(level: Int) {
+            if (!isActiveEpoch(epoch)) return
             getAllHandlers().forEach { it.setDefaultLogLevel(level) }
         }
 
         override fun clearLogs() {
+            if (!isActiveEpoch(epoch)) return
             getAllHandlers().forEach { it.clearLogs() }
         }
 
         override fun writeLogs(messageList: LogIterator?) {
-            if (messageList == null) return
+            if (messageList == null || !isActiveEpoch(epoch)) return
             val logs = messageList.toList()
             getAllHandlers().forEach { it.appendLogs(logs) }
         }
 
         override fun writeStatus(message: StatusMessage) {
+            if (!isActiveEpoch(epoch)) return
             getAllHandlers().forEach { it.updateStatus(message) }
         }
 
         override fun initializeClashMode(modeList: StringIterator, currentMode: String) {
+            if (!isActiveEpoch(epoch)) return
             val modes = modeList.toList()
             getAllHandlers().forEach { it.initializeClashMode(modes, currentMode) }
         }
 
         override fun updateClashMode(newMode: String) {
+            if (!isActiveEpoch(epoch)) return
             getAllHandlers().forEach { it.updateClashMode(newMode) }
         }
 
         override fun writeConnectionEvents(events: ConnectionEvents?) {
-            if (events == null) return
+            if (events == null || !isActiveEpoch(epoch)) return
             getAllHandlers().forEach { it.writeConnectionEvents(events) }
         }
     }
 }
-

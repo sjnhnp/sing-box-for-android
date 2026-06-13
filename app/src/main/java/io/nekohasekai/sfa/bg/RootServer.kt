@@ -238,7 +238,6 @@ class RootServer : RootService() {
         override fun close() {
             session.close()
         }
-
     }
 
     private fun broadcastEnrichedEntries(rawList: List<Pair<String, String>>) {

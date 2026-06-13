@@ -21,6 +21,7 @@ import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.FilterAlt
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.SettingsRemote
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Card
@@ -124,6 +125,12 @@ fun SettingsScreen(navController: NavController) {
                     title = stringResource(R.string.profile_override),
                     icon = Icons.Outlined.FilterAlt,
                     onClick = { navController.navigate("settings/profile_override") },
+                )
+
+                SettingsItem(
+                    title = stringResource(R.string.remote_control),
+                    icon = Icons.Outlined.SettingsRemote,
+                    onClick = { navController.navigate("settings/remote_control") },
                 )
 
                 SettingsItem(
