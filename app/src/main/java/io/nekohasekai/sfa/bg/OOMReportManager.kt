@@ -157,8 +157,31 @@ object OOMReportManager {
         if (!includeLog) {
             File(strippedDir, GO_LOG_FILE_NAME).delete()
         }
-        Libbox.createZipArchive(strippedDir.path, zipFile.path)
+        createZipArchiveCompat(strippedDir.path, zipFile.path, useAgeEncryption)
         zipFile
+    }
+
+    private fun createZipArchiveCompat(sourcePath: String, destinationPath: String, useAgeEncryption: Boolean) {
+        try {
+            val method = Libbox::class.java.getMethod(
+                "createZipArchive",
+                String::class.java,
+                String::class.java,
+                java.lang.Boolean.TYPE
+            )
+            method.invoke(null, sourcePath, destinationPath, useAgeEncryption)
+        } catch (_: Exception) {
+            try {
+                val method = Libbox::class.java.getMethod(
+                    "createZipArchive",
+                    String::class.java,
+                    String::class.java
+                )
+                method.invoke(null, sourcePath, destinationPath)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     private fun parseTimestamp(name: String): Date? {
