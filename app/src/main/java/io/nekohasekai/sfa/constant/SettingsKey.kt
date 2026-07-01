@@ -42,6 +42,7 @@ object SettingsKey {
 
     // Remote Control
     const val ACTIVE_REMOTE_SERVER_ID = "active_remote_server_id"
+
     // Tailscale SSH
     const val TAILSCALE_SSH_REMEMBERED_USERNAMES = "tailscale_ssh_remembered_usernames"
     const val TAILSCALE_SSH_QUICK_CONNECT_PEERS = "tailscale_ssh_quick_connect_peers"

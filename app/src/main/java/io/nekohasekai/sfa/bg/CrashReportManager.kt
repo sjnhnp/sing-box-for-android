@@ -200,10 +200,10 @@ object CrashReportManager {
 
     fun hasConfigFile(report: CrashReport): Boolean = File(report.directory, CONFIG_FILE_NAME).exists()
 
-    suspend fun createZipArchive(report: CrashReport, includeConfig: Boolean): File = withContext(Dispatchers.IO) {
+    suspend fun createZipArchive(report: CrashReport, includeConfig: Boolean, includeLog: Boolean, useAgeEncryption: Boolean): File = withContext(Dispatchers.IO) {
         val cacheDir = File(Application.application.cacheDir, CRASH_REPORTS_DIR_NAME)
         cacheDir.mkdirs()
-        val zipFile = File(cacheDir, "${report.id}.zip")
+        val zipFile = File(cacheDir, if (useAgeEncryption) "${report.id}.zip.age" else "${report.id}.zip")
         zipFile.delete()
         val strippedDir = File(cacheDir, report.id)
         strippedDir.deleteRecursively()
@@ -212,9 +212,14 @@ object CrashReportManager {
         if (!includeConfig) {
             File(strippedDir, CONFIG_FILE_NAME).delete()
         }
+        if (!includeLog) {
+            File(strippedDir, GO_LOG_FILE_NAME).delete()
+            File(strippedDir, JVM_LOG_FILE_NAME).delete()
+        }
         Libbox.createZipArchive(strippedDir.path, zipFile.path)
         zipFile
     }
+
 
     private fun nextAvailableReportDir(date: Date): File {
         val crashReportsDir = File(workingDir, CRASH_REPORTS_DIR_NAME)
