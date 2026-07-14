@@ -111,6 +111,7 @@ class Application : Application() {
     private fun setupLibbox(baseDir: File, workingDir: File, tempDir: File) {
         Libbox.setup(createSetupOptions(baseDir, workingDir, tempDir))
     }
+
     private fun createSetupOptions(baseDir: File, workingDir: File, tempDir: File): SetupOptions = SetupOptions().also {
         it.basePath = baseDir.path
         it.workingPath = workingDir.path

@@ -775,6 +775,8 @@ class MainActivity :
                 null
             }
 
+
+
         val showGroupsInNav = dashboardUiState.hasGroups
         val showConnectionsInNav =
             if (isRemote) {

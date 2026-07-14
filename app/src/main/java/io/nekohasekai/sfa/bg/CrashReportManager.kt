@@ -242,8 +242,6 @@ object CrashReportManager {
             }
         }
     }
-
-
     private fun nextAvailableReportDir(date: Date): File {
         val crashReportsDir = File(workingDir, CRASH_REPORTS_DIR_NAME)
         val baseName = timestampFormat.format(date)

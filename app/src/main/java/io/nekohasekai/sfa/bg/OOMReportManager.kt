@@ -183,7 +183,6 @@ object OOMReportManager {
             }
         }
     }
-
     private fun parseTimestamp(name: String): Date? {
         val components = name.split("-")
         val baseName = if (components.size > 5 && components.last().toIntOrNull() != null) {
