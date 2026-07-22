@@ -8,6 +8,7 @@ import android.net.Uri
 import android.net.VpnService
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -75,6 +76,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
@@ -119,6 +121,8 @@ import io.nekohasekai.sfa.compose.screen.dashboard.DashboardViewModel
 import io.nekohasekai.sfa.compose.screen.dashboard.GroupsCard
 import io.nekohasekai.sfa.compose.screen.dashboard.groups.GroupsViewModel
 import io.nekohasekai.sfa.compose.screen.log.LogViewModel
+import io.nekohasekai.sfa.compose.screen.tools.OpenConnectStatusViewModel
+import io.nekohasekai.sfa.compose.screen.tools.OpenVPNStatusViewModel
 import io.nekohasekai.sfa.compose.screen.tools.TailscaleSSHSharedViewModel
 import io.nekohasekai.sfa.compose.screen.tools.TailscaleStatusViewModel
 import io.nekohasekai.sfa.compose.screen.usbip.USBIPStatusViewModel
@@ -204,6 +208,13 @@ class MainActivity :
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        ConfigurationCompat.getLocales(resources.configuration)[0]?.let { locale ->
+            runCatching {
+                Libbox.setLocale(locale.toLanguageTag())
+            }.onFailure {
+                Log.d("MainActivity", "set locale: ${it.message}")
+            }
+        }
         enableEdgeToEdge()
 
         connection.reconnect()
@@ -775,7 +786,19 @@ class MainActivity :
                 null
             }
 
+        val openConnectStatusViewModel: OpenConnectStatusViewModel? =
+            if (isToolsRoute) {
+                viewModel()
+            } else {
+                null
+            }
 
+        val openVPNStatusViewModel: OpenVPNStatusViewModel? =
+            if (isToolsRoute) {
+                viewModel()
+            } else {
+                null
+            }
 
         val showGroupsInNav = dashboardUiState.hasGroups
         val showConnectionsInNav =
@@ -904,6 +927,8 @@ class MainActivity :
                     tailscaleStatusViewModel = tailscaleStatusViewModel,
                     tailscaleSSHSharedViewModel = tailscaleSSHSharedViewModel,
                     usbIPStatusViewModel = usbIPStatusViewModel,
+                    openConnectStatusViewModel = openConnectStatusViewModel,
+                    openVPNStatusViewModel = openVPNStatusViewModel,
                     modifier = Modifier.fillMaxSize(),
                 )
                 if (!useNavigationRail) {
