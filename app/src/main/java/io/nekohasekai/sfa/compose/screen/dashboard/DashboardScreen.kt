@@ -12,7 +12,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -21,11 +20,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -39,108 +36,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.nekohasekai.sfa.R
-import io.nekohasekai.sfa.compose.base.UiEvent
 import io.nekohasekai.sfa.compose.screen.dashboard.DashboardIntent
-import io.nekohasekai.sfa.compose.component.RemoteControlMenuItems
-import io.nekohasekai.sfa.compose.component.rememberRemoteServers
-import io.nekohasekai.sfa.compose.navigation.NewProfileArgs
-import io.nekohasekai.sfa.compose.topbar.OverrideTopBar
-import io.nekohasekai.sfa.constant.Status
-import io.nekohasekai.sfa.utils.RemoteControlManager
-import kotlinx.coroutines.launch
-
-data class CardRenderItem(val cards: List<CardGroup>, val isRow: Boolean)
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun DashboardScreen(
-    serviceStatus: Status = Status.Stopped,
-    showStartFab: Boolean = false,
-    showStatusBar: Boolean = false,
-    onOpenNewProfile: (NewProfileArgs) -> Unit = {},
-    viewModel: DashboardViewModel = viewModel(),
-) {
-    val uiState by viewModel.uiState.collectAsState()
-    val remoteServer by RemoteControlManager.remoteServer.collectAsState()
-    val remoteConnected by RemoteControlManager.isConnected.collectAsState()
-    val isRemote = remoteServer != null
-    val remoteServers by rememberRemoteServers()
-    var showOthersMenu by remember { mutableStateOf(false) }
-
-    OverrideTopBar {
-        TopAppBar(
-            title = { Text(stringResource(R.string.title_dashboard)) },
-            actions = {
-                Box {
-                    IconButton(onClick = { showOthersMenu = true }) {
-                        Icon(
-                            imageVector = Icons.Default.MoreVert,
-                            contentDescription = stringResource(R.string.title_others),
-                        )
-                    }
-                    DropdownMenu(
-                        expanded = showOthersMenu,
-                        onDismissRequest = { showOthersMenu = false },
-                    ) {
-                        DropdownMenuItem(
-                            text = { Text(stringResource(R.string.dashboard_items)) },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Default.GridView,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                )
-                            },
-                            onClick = {
-                                showOthersMenu = false
-                                viewModel.dispatch(DashboardIntent.ToggleCardSettingsDialog)
-                            },
-                        )
-                        RemoteControlMenuItems(
-                            servers = remoteServers,
-                            onAction = { showOthersMenu = false },
-                        )
-                    }
-                }
-            },
-        )
-    }
 
     // Update service status in ViewModel
     LaunchedEffect(serviceStatus) {
         viewModel.dispatch(DashboardIntent.ServiceStatusChanged(serviceStatus))
     }
-
-    // Events are now handled globally in ComposeActivity via GlobalEventBus
-
-    // Show deprecated notes dialog
-    if (uiState.showDeprecatedDialog && uiState.deprecatedNotes.isNotEmpty()) {
-        val note = uiState.deprecatedNotes.first()
-        AlertDialog(
-            onDismissRequest = { },
-            title = { Text(stringResource(R.string.error_deprecated_warning)) },
-            text = { Text(note.message) },
-            confirmButton = {
-                TextButton(onClick = { viewModel.dispatch(DashboardIntent.DismissDeprecatedNote) }) {
-                    Text(stringResource(R.string.ok))
-                }
-            },
-            dismissButton =
-            if (!note.migrationLink.isNullOrBlank()) {
-                {
-                    TextButton(onClick = {
-                        viewModel.sendGlobalEvent(UiEvent.OpenUrl(note.migrationLink))
-                        viewModel.dispatch(DashboardIntent.DismissDeprecatedNote)
-                    }) {
-                        Text(stringResource(R.string.error_deprecated_documentation))
-                    }
-                }
-            } else {
-                null
-            },
-        )
-    }
-
     val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
