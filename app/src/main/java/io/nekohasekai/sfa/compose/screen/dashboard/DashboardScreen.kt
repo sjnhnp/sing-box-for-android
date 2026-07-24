@@ -35,8 +35,30 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.runtime.LaunchedEffect
+import io.nekohasekai.sfa.compose.navigation.NewProfileArgs
+import io.nekohasekai.sfa.constant.Status
+import kotlinx.coroutines.launch
 import io.nekohasekai.sfa.R
 import io.nekohasekai.sfa.compose.screen.dashboard.DashboardIntent
+
+data class CardRenderItem(
+    val cards: List<CardGroup>,
+    val isRow: Boolean,
+)
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DashboardScreen(
+    serviceStatus: Status = Status.Stopped,
+    showStartFab: Boolean = false,
+    showStatusBar: Boolean = false,
+    onOpenNewProfile: (NewProfileArgs) -> Unit = {},
+    viewModel: DashboardViewModel = viewModel(),
+    isRemote: Boolean = false,
+    remoteConnected: Boolean = true,
+) {
+    val uiState by viewModel.uiState.collectAsState()
 
     // Update service status in ViewModel
     LaunchedEffect(serviceStatus) {
