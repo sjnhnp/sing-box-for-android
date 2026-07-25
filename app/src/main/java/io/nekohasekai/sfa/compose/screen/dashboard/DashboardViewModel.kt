@@ -297,7 +297,7 @@ class DashboardViewModel @Inject constructor(
         }
     }
 
-    private fun dismissDeprecatedNote() {
+    fun dismissDeprecatedNote() {
         val notes = currentState.deprecatedNotes
         if (notes.isNotEmpty()) {
             updateState {
@@ -472,7 +472,7 @@ class DashboardViewModel @Inject constructor(
         updateState { copy(showProfilePickerSheet = false) }
     }
 
-    private fun updateServiceStatus(status: Status) {
+    fun updateServiceStatus(status: Status) {
         viewModelScope.launch {
             _serviceStatus.emit(status)
             updateState {

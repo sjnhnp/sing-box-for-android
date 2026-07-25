@@ -369,6 +369,8 @@ dependencies {
     // Xposed API for self-hooking VPN hide module
     compileOnly("de.robv.android.xposed:api:82")
     compileOnly(project(":libxposed-api"))
+    annotationProcessor("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.9.0")
+    ksp("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.9.0")
 }
 
 val playCredentialsJSON = rootProject.file("service-account-credentials.json")
@@ -390,6 +392,7 @@ if (playCredentialsJSON.exists()) {
 tasks.withType<KotlinCompile>().configureEach {
     compilerOptions {
         jvmTarget.set(JvmTarget.JVM_17)
+        freeCompilerArgs.addAll("-Xmetadata-version=2.0.0", "-Xsuppress-version-warnings")
     }
 }
 
