@@ -1,7 +1,6 @@
 package io.nekohasekai.sfa.utils
 
 import android.util.Log
-import go.Seq
 import io.nekohasekai.libbox.CommandClientHandler
 import io.nekohasekai.libbox.CommandClientOptions
 import io.nekohasekai.libbox.ConnectionEvents
@@ -13,13 +12,13 @@ import io.nekohasekai.libbox.OutboundGroupItemIterator
 import io.nekohasekai.libbox.OutboundGroupIterator
 import io.nekohasekai.libbox.StatusMessage
 import io.nekohasekai.libbox.StringIterator
+import io.nekohasekai.sfa.di.ApplicationScope
 import io.nekohasekai.sfa.ktx.toList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import io.nekohasekai.sfa.di.ApplicationScope
 import java.util.Collections
 import javax.inject.Inject
 import javax.inject.Singleton

@@ -39,6 +39,7 @@ class RootServer : RootService() {
     private var tetheringManager: Any? = null
 
     private val bridgeSessions = mutableSetOf<BridgeSessionBinder>()
+
     private val binder = object : IRootService.Stub() {
         override fun destroy() {
             stopSelf()
@@ -203,6 +204,7 @@ class RootServer : RootService() {
             }
             return binder
         }
+
         override fun lookupSFTPServer(): String {
             val termuxPrefix = File(UserResolver.TERMUX_PREFIX)
             for (name in arrayOf("libexec/sftp-server", "lib/openssh/sftp-server")) {
@@ -265,6 +267,7 @@ class RootServer : RootService() {
             session.close()
         }
     }
+
     private class RootShellSession(
         private val session: ShellSession,
     ) : IRootShellSession.Stub() {

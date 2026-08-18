@@ -184,6 +184,7 @@ object RootClient {
             throw e.rethrowAsRuntime()
         }
     }
+
     suspend fun unregisterNeighborTableCallback(callback: INeighborTableCallback) {
         try {
             service?.unregisterNeighborTableCallback(callback)

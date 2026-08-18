@@ -131,7 +131,7 @@ private val LightColorScheme =
     )
 
 @Composable
-fun SFATheme(
+fun Theme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
     // Disabled by default to enforce Premium Design

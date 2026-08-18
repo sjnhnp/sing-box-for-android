@@ -53,7 +53,6 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -75,6 +74,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.core.app.ActivityCompat
 import androidx.core.content.ContextCompat
 import androidx.core.os.ConfigurationCompat
 import androidx.lifecycle.ViewModel
@@ -104,12 +104,13 @@ import io.nekohasekai.sfa.compose.base.SelectableMessageDialog
 import io.nekohasekai.sfa.compose.base.UiEvent
 import io.nekohasekai.sfa.compose.component.RemoteStatusBar
 import io.nekohasekai.sfa.compose.component.ServiceStatusBar
+import io.nekohasekai.sfa.compose.component.SnackbarHost
 import io.nekohasekai.sfa.compose.component.UpdateAvailableDialog
 import io.nekohasekai.sfa.compose.component.UptimeText
 import io.nekohasekai.sfa.compose.model.Connection
+import io.nekohasekai.sfa.compose.navigation.NavHost
 import io.nekohasekai.sfa.compose.navigation.NewProfileArgs
 import io.nekohasekai.sfa.compose.navigation.ProfileRoutes
-import io.nekohasekai.sfa.compose.navigation.SFANavHost
 import io.nekohasekai.sfa.compose.navigation.Screen
 import io.nekohasekai.sfa.compose.navigation.bottomNavigationScreens
 import io.nekohasekai.sfa.compose.screen.configuration.ProfileImportHandler
@@ -123,10 +124,11 @@ import io.nekohasekai.sfa.compose.screen.dashboard.groups.GroupsViewModel
 import io.nekohasekai.sfa.compose.screen.log.LogViewModel
 import io.nekohasekai.sfa.compose.screen.tools.OpenConnectStatusViewModel
 import io.nekohasekai.sfa.compose.screen.tools.OpenVPNStatusViewModel
+import io.nekohasekai.sfa.compose.screen.tools.TaildropSendManager
 import io.nekohasekai.sfa.compose.screen.tools.TailscaleSSHSharedViewModel
 import io.nekohasekai.sfa.compose.screen.tools.TailscaleStatusViewModel
 import io.nekohasekai.sfa.compose.screen.usbip.USBIPStatusViewModel
-import io.nekohasekai.sfa.compose.theme.SFATheme
+import io.nekohasekai.sfa.compose.theme.Theme
 import io.nekohasekai.sfa.compose.topbar.LocalTopBarController
 import io.nekohasekai.sfa.compose.topbar.TopBarController
 import io.nekohasekai.sfa.compose.topbar.TopBarEntry
@@ -156,6 +158,9 @@ class MainActivity :
     private var currentAlert by mutableStateOf<Pair<Alert, String?>?>(null)
     private var showLocationPermissionDialog by mutableStateOf(false)
     private var showBackgroundLocationDialog by mutableStateOf(false)
+    private var showLocalNetworkPermissionDialog by mutableStateOf(false)
+    private var notificationPermissionRequested = false
+    private var localNetworkPermissionRequested = false
     private var showImportProfileDialog by mutableStateOf(false)
     private var pendingImportProfile by mutableStateOf<Triple<String, String, String>?>(null)
     private var showImportLocalProfileDialog by mutableStateOf(false)
@@ -168,12 +173,8 @@ class MainActivity :
     private val notificationPermissionLauncher =
         registerForActivityResult(
             ActivityResultContracts.RequestPermission(),
-        ) { isGranted ->
-            if (Settings.dynamicNotification && !isGranted) {
-                onServiceAlert(Alert.RequestNotificationPermission, null)
-            } else {
-                startService0()
-            }
+        ) {
+            startService()
         }
 
     private val locationPermissionLauncher =
@@ -192,6 +193,11 @@ class MainActivity :
             if (it) {
                 startService()
             }
+        }
+
+    private val localNetworkPermissionLauncher =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) {
+            startService()
         }
 
     private val prepareLauncher =
@@ -235,8 +241,8 @@ class MainActivity :
         handleIntent(intent)
 
         setContent {
-            SFATheme {
-                SFAApp()
+            Theme {
+                App()
             }
         }
     }
@@ -254,6 +260,16 @@ class MainActivity :
             pendingNavigationRoute.value = "settings/privilege"
         }
         val uri = intent.data ?: return
+        if (uri.scheme == "sing-box") {
+            val target = if (uri.isOpaque) Uri.parse("sing-box://" + uri.schemeSpecificPart) else uri
+            if (target.host == "taildrop") {
+                val endpointTag = target.getQueryParameter("endpoint")
+                if (!endpointTag.isNullOrEmpty()) {
+                    pendingNavigationRoute.value = "tools/tailscale/${Uri.encode(endpointTag)}/taildrop"
+                }
+                return
+            }
+        }
         if (intent.action == Action.OPEN_URL) {
             launchCustomTab(uri.toString())
             return
@@ -298,7 +314,26 @@ class MainActivity :
     @SuppressLint("NewApi")
     fun startService() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !ServiceNotification.checkPermission()) {
-            notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            if (!notificationPermissionRequested) {
+                notificationPermissionRequested = true
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                return
+            }
+            if (Settings.dynamicNotification) {
+                onServiceAlert(Alert.RequestNotificationPermission, null)
+                return
+            }
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN &&
+            !hasPermission(Manifest.permission.ACCESS_LOCAL_NETWORK) &&
+            !localNetworkPermissionRequested
+        ) {
+            localNetworkPermissionRequested = true
+            if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_LOCAL_NETWORK)) {
+                showLocalNetworkPermissionDialog = true
+            } else {
+                localNetworkPermissionLauncher.launch(Manifest.permission.ACCESS_LOCAL_NETWORK)
+            }
             return
         }
         startService0()
@@ -339,7 +374,7 @@ class MainActivity :
 
     @OptIn(ExperimentalMaterial3Api::class)
     @Composable
-    fun SFAApp() {
+    fun App() {
         val navController = rememberNavController()
         val navBackStackEntry by navController.currentBackStackEntryAsState()
         val currentDestination = navBackStackEntry?.destination
@@ -497,6 +532,16 @@ class MainActivity :
                     backgroundLocationPermissionLauncher.launch(Manifest.permission.ACCESS_BACKGROUND_LOCATION)
                 }
             }, onDismiss = { showBackgroundLocationDialog = false })
+        }
+
+        if (showLocalNetworkPermissionDialog) {
+            LocalNetworkPermissionDialog(onConfirm = {
+                showLocalNetworkPermissionDialog = false
+                localNetworkPermissionLauncher.launch(Manifest.permission.ACCESS_LOCAL_NETWORK)
+            }, onDismiss = {
+                showLocalNetworkPermissionDialog = false
+                startService()
+            })
         }
 
         // Handle import remote profile dialog
@@ -800,15 +845,15 @@ class MainActivity :
                 null
             }
 
-        val isToolsRoute = currentRootRoute == Screen.Tools.route
-        val tailscaleStatusViewModel: TailscaleStatusViewModel? =
-            if (isToolsRoute) {
-                viewModel()
-            } else {
-                null
-            }
-
         val tailscaleSSHSharedViewModel: TailscaleSSHSharedViewModel = viewModel()
+
+        val isToolsRoute = currentRootRoute == Screen.Tools.route
+
+        val tailscaleStatusViewModel: TailscaleStatusViewModel = viewModel()
+        val tailscaleState by tailscaleStatusViewModel.uiState.collectAsState()
+        val taildropUnreadCount = tailscaleState.endpoints.sumOf { it.unreadFileCount }
+        val taildropSendSessions by TaildropSendManager.sessions.collectAsState()
+        val taildropFailedCount = taildropSendSessions.count { it.errorMessage != null }
 
         val usbIPStatusViewModel: USBIPStatusViewModel? =
             if (isToolsRoute) {
@@ -831,6 +876,37 @@ class MainActivity :
                 null
             }
 
+        val statusTargetActive = remoteServer != null || currentServiceStatus == Status.Started
+        val subscribeStatus = {
+            tailscaleStatusViewModel.subscribe()
+            usbIPStatusViewModel?.subscribe()
+            openConnectStatusViewModel?.subscribe()
+            openVPNStatusViewModel?.subscribe()
+        }
+        val cancelStatus = {
+            tailscaleStatusViewModel.cancel()
+            usbIPStatusViewModel?.cancel()
+            openConnectStatusViewModel?.cancel()
+            openVPNStatusViewModel?.cancel()
+        }
+        LaunchedEffect(remoteServer?.id) {
+            cancelStatus()
+            if (statusTargetActive) {
+                subscribeStatus()
+            }
+        }
+        LaunchedEffect(
+            statusTargetActive,
+            usbIPStatusViewModel,
+            openConnectStatusViewModel,
+            openVPNStatusViewModel,
+        ) {
+            if (statusTargetActive) {
+                subscribeStatus()
+            } else {
+                cancelStatus()
+            }
+        }
         val showGroupsInNav = dashboardUiState.hasGroups
         val showConnectionsInNav =
             if (isRemote) {
@@ -943,7 +1019,7 @@ class MainActivity :
                 val showStatusBar = isRemote || serviceRunning || currentServiceStatus == Status.Stopping
                 val showStartFab = !isRemote && !serviceRunning && dashboardUiState.selectedProfileId != -1L
 
-                SFANavHost(
+                NavHost(
                     navController = navController,
                     serviceStatus = currentServiceStatus,
                     showStartFab = showStartFab,
@@ -1138,7 +1214,8 @@ class MainActivity :
         val crashReportUnreadCount by CrashReportManager.unreadCount.collectAsState()
         val oomReportUnreadCount by OOMReportManager.unreadCount.collectAsState()
         // The crash/OOM report entries are hidden in remote control mode.
-        val toolsUnreadCount = if (isRemote) 0 else crashReportUnreadCount + oomReportUnreadCount
+        val toolsUnreadCount =
+            (if (isRemote) 0 else crashReportUnreadCount + oomReportUnreadCount) + taildropUnreadCount
 
         LaunchedEffect(Unit) {
             withContext(Dispatchers.IO) {
@@ -1162,6 +1239,10 @@ class MainActivity :
                                     icon = {
                                         if (screen == Screen.Settings && hasUpdate) {
                                             BadgedBox(badge = { Badge(containerColor = MaterialTheme.colorScheme.primary) }) {
+                                                Icon(screen.icon, contentDescription = null)
+                                            }
+                                        } else if (screen == Screen.Tools && taildropFailedCount > 0) {
+                                            BadgedBox(badge = { Badge(containerColor = MaterialTheme.colorScheme.error) { Text("!") } }) {
                                                 Icon(screen.icon, contentDescription = null)
                                             }
                                         } else if (screen == Screen.Tools && toolsUnreadCount > 0) {
@@ -1212,6 +1293,10 @@ class MainActivity :
                                                 BadgedBox(badge = { Badge(containerColor = MaterialTheme.colorScheme.primary) }) {
                                                     Icon(screen.icon, contentDescription = null)
                                                 }
+                                            } else if (screen == Screen.Tools && taildropFailedCount > 0) {
+                                                BadgedBox(badge = { Badge(containerColor = MaterialTheme.colorScheme.error) { Text("!") } }) {
+                                                    Icon(screen.icon, contentDescription = null)
+                                                }
                                             } else if (screen == Screen.Tools && toolsUnreadCount > 0) {
                                                 BadgedBox(badge = { Badge(containerColor = MaterialTheme.colorScheme.error) { Text("$toolsUnreadCount") } }) {
                                                     Icon(screen.icon, contentDescription = null)
@@ -1246,6 +1331,18 @@ class MainActivity :
                 ) { paddingValues ->
                     scaffoldContent(paddingValues)
                 }
+            }
+        }
+
+        LaunchedEffect(dashboardUiState.hasGroups) {
+            if (!dashboardUiState.hasGroups) {
+                showGroupsSheet = false
+            }
+        }
+        val connectionsAvailable = if (isRemote) remoteConnected else currentServiceStatus == Status.Started
+        LaunchedEffect(connectionsAvailable) {
+            if (!connectionsAvailable) {
+                showConnectionsSheet = false
             }
         }
 
@@ -1505,6 +1602,25 @@ class MainActivity :
             onDismissRequest = onDismiss,
             title = { Text(stringResource(R.string.location_permission_title)) },
             text = { Text(stringResource(R.string.location_permission_background_description)) },
+            confirmButton = {
+                TextButton(onClick = onConfirm) {
+                    Text(stringResource(R.string.ok))
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.no_thanks))
+                }
+            },
+        )
+    }
+
+    @Composable
+    private fun LocalNetworkPermissionDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
+        AlertDialog(
+            onDismissRequest = onDismiss,
+            title = { Text(stringResource(R.string.local_network_permission_title)) },
+            text = { Text(stringResource(R.string.local_network_permission_description)) },
             confirmButton = {
                 TextButton(onClick = onConfirm) {
                     Text(stringResource(R.string.ok))

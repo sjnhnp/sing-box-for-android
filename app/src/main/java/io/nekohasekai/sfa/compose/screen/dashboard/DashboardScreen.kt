@@ -36,8 +36,12 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.LaunchedEffect
+import io.nekohasekai.sfa.compose.component.RemoteControlMenuItems
+import io.nekohasekai.sfa.compose.component.rememberRemoteServers
+import io.nekohasekai.sfa.compose.topbar.OverrideTopBar
 import io.nekohasekai.sfa.compose.navigation.NewProfileArgs
 import io.nekohasekai.sfa.constant.Status
+import io.nekohasekai.sfa.utils.RemoteControlManager
 import kotlinx.coroutines.launch
 import io.nekohasekai.sfa.R
 import io.nekohasekai.sfa.compose.screen.dashboard.DashboardIntent
@@ -59,10 +63,54 @@ fun DashboardScreen(
     remoteConnected: Boolean = true,
 ) {
     val uiState by viewModel.uiState.collectAsState()
+    val remoteServer by RemoteControlManager.remoteServer.collectAsState()
+    val remoteConnected by RemoteControlManager.isConnected.collectAsState()
+    val isRemote = remoteServer != null
+    val remoteServers by rememberRemoteServers()
+    var showOthersMenu by remember { mutableStateOf(false) }
 
     // Update service status in ViewModel
     LaunchedEffect(serviceStatus) {
         viewModel.dispatch(DashboardIntent.ServiceStatusChanged(serviceStatus))
+    }
+
+    OverrideTopBar {
+        TopAppBar(
+            title = { Text(stringResource(R.string.title_dashboard)) },
+            actions = {
+                Box {
+                    IconButton(onClick = { showOthersMenu = true }) {
+                        Icon(
+                            imageVector = Icons.Default.MoreVert,
+                            contentDescription = stringResource(R.string.title_others),
+                        )
+                    }
+                    DropdownMenu(
+                        expanded = showOthersMenu,
+                        onDismissRequest = { showOthersMenu = false },
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(R.string.dashboard_items)) },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Default.GridView,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                )
+                            },
+                            onClick = {
+                                showOthersMenu = false
+                                viewModel.dispatch(DashboardIntent.ToggleCardSettingsDialog)
+                            },
+                        )
+                        RemoteControlMenuItems(
+                            servers = remoteServers,
+                            onAction = { showOthersMenu = false },
+                        )
+                    }
+                }
+            },
+        )
     }
     val sheetState = rememberModalBottomSheetState()
     val scope = rememberCoroutineScope()
