@@ -95,6 +95,7 @@ import io.nekohasekai.sfa.R
 import io.nekohasekai.sfa.bg.BoxService
 import io.nekohasekai.sfa.bg.CrashReportManager
 import io.nekohasekai.sfa.bg.OOMReportManager
+import io.nekohasekai.sfa.bg.PowerReportManager
 import io.nekohasekai.sfa.bg.ServiceConnection
 import io.nekohasekai.sfa.bg.ServiceNotification
 import io.nekohasekai.sfa.compat.WindowSizeClassCompat
@@ -862,6 +863,7 @@ class MainActivity :
                 null
             }
 
+
         val openConnectStatusViewModel: OpenConnectStatusViewModel? =
             if (isToolsRoute) {
                 viewModel()
@@ -997,6 +999,7 @@ class MainActivity :
                             launchSingleTop = true
                         }
                     }
+
                     is UiEvent.ApplyServiceChange -> enqueueApplyServiceChange(event.mode)
                 }
             }
@@ -1213,14 +1216,16 @@ class MainActivity :
 
         val crashReportUnreadCount by CrashReportManager.unreadCount.collectAsState()
         val oomReportUnreadCount by OOMReportManager.unreadCount.collectAsState()
+        val powerReportUnreadCount by PowerReportManager.unreadCount.collectAsState()
         // The crash/OOM report entries are hidden in remote control mode.
         val toolsUnreadCount =
-            (if (isRemote) 0 else crashReportUnreadCount + oomReportUnreadCount) + taildropUnreadCount
+            (if (isRemote) 0 else crashReportUnreadCount + oomReportUnreadCount + powerReportUnreadCount) + taildropUnreadCount
 
         LaunchedEffect(Unit) {
             withContext(Dispatchers.IO) {
                 CrashReportManager.refresh()
                 OOMReportManager.refresh()
+                PowerReportManager.refresh()
             }
         }
 

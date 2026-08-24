@@ -36,10 +36,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.runtime.LaunchedEffect
+import io.nekohasekai.sfa.R
 import io.nekohasekai.sfa.compose.component.RemoteControlMenuItems
 import io.nekohasekai.sfa.compose.component.rememberRemoteServers
-import io.nekohasekai.sfa.compose.topbar.OverrideTopBar
 import io.nekohasekai.sfa.compose.navigation.NewProfileArgs
+import io.nekohasekai.sfa.compose.topbar.OverrideTopBar
 import io.nekohasekai.sfa.constant.Status
 import io.nekohasekai.sfa.utils.RemoteControlManager
 import kotlinx.coroutines.launch
@@ -68,7 +69,6 @@ fun DashboardScreen(
     val isRemote = remoteServer != null
     val remoteServers by rememberRemoteServers()
     var showOthersMenu by remember { mutableStateOf(false) }
-
     // Update service status in ViewModel
     LaunchedEffect(serviceStatus) {
         viewModel.dispatch(DashboardIntent.ServiceStatusChanged(serviceStatus))

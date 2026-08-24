@@ -239,7 +239,6 @@ dependencies {
     "playImplementation"("com.google.android.material:material:$materialVersion24")
     "playAnnotationProcessor"("androidx.room:room-compiler:$roomVersion24")
     "kspPlay"("androidx.room:room-compiler:$roomVersion24")
-
     "otherImplementation"("androidx.lifecycle:lifecycle-livedata-ktx:$lifecycleVersion24")
     "otherImplementation"("androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion24")
     "otherImplementation"("androidx.lifecycle:lifecycle-process:$lifecycleVersion24")
@@ -363,14 +362,23 @@ dependencies {
     implementation("org.kodein.emoji:emoji-kt:2.5.0")
 
     // Terminal emulator
-    implementation(project(":terminal-emulator"))
-    implementation(project(":terminal-view"))
+    val libghosttyVersion = "0.1.0-SNAPSHOT"
+    implementation("io.github.sagernet:libghostty-android:$libghosttyVersion")
+    implementation("io.github.sagernet:libghostty-android-extras:$libghosttyVersion")
+    "playImplementation"("io.github.sagernet:libghostty-android-compose:$libghosttyVersion")
+    "otherImplementation"("io.github.sagernet:libghostty-android-compose:$libghosttyVersion")
+    "otherLegacyImplementation"("io.github.sagernet:libghostty-android-compose-legacy:$libghosttyVersion")
 
     // Xposed API for self-hooking VPN hide module
     compileOnly("de.robv.android.xposed:api:82")
     compileOnly(project(":libxposed-api"))
     annotationProcessor("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.9.0")
     ksp("org.jetbrains.kotlinx:kotlinx-metadata-jvm:0.9.0")
+}
+
+// For libghostty-android snapshots; remove after release.
+configurations.configureEach {
+    resolutionStrategy.cacheChangingModulesFor(0, "seconds")
 }
 
 val playCredentialsJSON = rootProject.file("service-account-credentials.json")
