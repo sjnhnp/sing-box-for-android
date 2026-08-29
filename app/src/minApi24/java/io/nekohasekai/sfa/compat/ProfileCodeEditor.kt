@@ -83,7 +83,6 @@ class ProfileCodeEditor(context: Context, private val syntax: CodeEditorSyntax =
                         TextStyle.makeStyle(EditorColorScheme.KEYWORD, true) applyTo "constant.builtin"
                         TextStyle.makeStyle(EditorColorScheme.OPERATOR) applyTo "escape"
                     }
-                }
                 },
             )
             getComponent(EditorAutoCompletion::class.java).popup.setOnDismissListener {

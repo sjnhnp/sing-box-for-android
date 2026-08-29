@@ -95,7 +95,9 @@ class BoxService(private val service: Service, private val platformInterface: Pl
 
     private fun startCommandServer() {
         Libbox.promoteOOMDraft()
-        Libbox.promotePowerReportDraft()
+        runCatching {
+            Libbox::class.java.getMethod("promotePowerReportDraft").invoke(null)
+        }
         val commandServer = CommandServer(this, platformInterface)
         commandServer.start()
         this.commandServer = commandServer
@@ -293,7 +295,9 @@ class BoxService(private val service: Service, private val platformInterface: Pl
                 close()
 //                Seq.destroyRef(refnum)
             }
-            Libbox.promotePowerReportDraft()
+            runCatching {
+                Libbox::class.java.getMethod("promotePowerReportDraft").invoke(null)
+            }
             PowerReportManager.refresh()
             Settings.startedByUser = false
             withContext(Dispatchers.Main) {
@@ -426,6 +430,7 @@ class BoxService(private val service: Service, private val platformInterface: Pl
         GlobalScope.launch(Dispatchers.Main) {
             Application.notification.cancel(identifier, typeID)
         }
+    }
 
     override fun triggerNativeCrash() {
         Thread {

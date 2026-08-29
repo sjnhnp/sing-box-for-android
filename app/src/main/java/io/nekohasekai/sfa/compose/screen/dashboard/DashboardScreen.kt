@@ -43,9 +43,8 @@ import io.nekohasekai.sfa.compose.navigation.NewProfileArgs
 import io.nekohasekai.sfa.compose.topbar.OverrideTopBar
 import io.nekohasekai.sfa.constant.Status
 import io.nekohasekai.sfa.utils.RemoteControlManager
-import kotlinx.coroutines.launch
-import io.nekohasekai.sfa.R
 import io.nekohasekai.sfa.compose.screen.dashboard.DashboardIntent
+import kotlinx.coroutines.launch
 
 data class CardRenderItem(
     val cards: List<CardGroup>,

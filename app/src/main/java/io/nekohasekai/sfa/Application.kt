@@ -123,10 +123,18 @@ class Application : Application() {
         it.logMaxLines = 3000
         it.debug = BuildConfig.DEBUG
         it.crashReportSource = "Application"
+        runCatching {
+            SetupOptions::class.java.getMethod("setAppVersion", String::class.java).invoke(it, BuildConfig.VERSION_CODE.toString())
+        }
+        runCatching {
+            SetupOptions::class.java.getMethod("setAppMarketingVersion", String::class.java).invoke(it, BuildConfig.VERSION_NAME)
+        }
         it.oomKillerEnabled = Settings.oomKillerEnabled
         it.oomKillerDisabled = Settings.oomKillerDisabled
         it.oomMemoryLimit = Settings.oomMemoryLimitMB.toLong() * 1024L * 1024L
-        it.powerReportEnabled = Settings.powerReportEnabled
+        runCatching {
+            SetupOptions::class.java.getMethod("setPowerReportEnabled", Boolean::class.javaPrimitiveType).invoke(it, Settings.powerReportEnabled)
+        }
     }
 
     companion object {
