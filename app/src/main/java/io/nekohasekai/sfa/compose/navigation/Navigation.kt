@@ -605,6 +605,7 @@ fun NavHost(
             val fileKind = backStackEntry.arguments?.getString("fileKind") ?: return@composable
             PowerReportFileContentScreen(navController = navController, reportId = reportId, fileKind = fileKind)
         }
+
         composable(Screen.Settings.route) {
             SettingsScreen(navController = navController)
         }

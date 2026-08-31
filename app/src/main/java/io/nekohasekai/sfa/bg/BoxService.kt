@@ -293,7 +293,6 @@ class BoxService(private val service: Service, private val platformInterface: Pl
             closeService()
             commandServer.apply {
                 close()
-//                Seq.destroyRef(refnum)
             }
             runCatching {
                 Libbox::class.java.getMethod("promotePowerReportDraft").invoke(null)

@@ -57,6 +57,7 @@ import io.nekohasekai.sfa.bg.PowerReportManager
 import io.nekohasekai.sfa.compose.component.RemoteControlMenuItems
 import io.nekohasekai.sfa.compose.component.rememberRemoteServers
 import io.nekohasekai.sfa.compose.screen.usbip.USBIPStatusViewModel
+import io.nekohasekai.sfa.compose.topbar.LocalScaffoldPadding
 import io.nekohasekai.sfa.compose.topbar.OverrideTopBar
 import io.nekohasekai.sfa.database.Settings
 import io.nekohasekai.sfa.terminal.DEFAULT_SSH_TERMINAL_TYPE
@@ -115,11 +116,14 @@ fun ToolsScreen(
     val openVPNState by openVPNViewModel.uiState.collectAsState()
     val remoteServer by RemoteControlManager.remoteServer.collectAsState()
 
+    val scaffoldPadding = LocalScaffoldPadding.current
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.surface)
             .verticalScroll(rememberScrollState())
+            .padding(scaffoldPadding)
             .padding(top = 8.dp, bottom = if (showStatusBar) STATUS_BAR_CONTENT_PADDING else 8.dp),
     ) {
         val tailscaleEndpoints = tailscaleState.endpoints
@@ -454,7 +458,7 @@ fun ToolsScreen(
                         }
                     },
                     modifier = Modifier
-                        .clip(endpointRowShape(0, debugRowCount))
+                        .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp))
                         .clickable { navController.navigate("tools/crash_report") },
                     colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 )
@@ -516,6 +520,7 @@ fun ToolsScreen(
 }
 
 private val STATUS_BAR_CONTENT_PADDING = 74.dp
+
 private fun endpointRowShape(index: Int, count: Int): RoundedCornerShape = when {
     count == 1 -> RoundedCornerShape(12.dp)
     index == 0 -> RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)

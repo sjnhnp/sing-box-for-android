@@ -351,6 +351,7 @@ class DashboardViewModel @Inject constructor(
     }
 
     private fun editProfile(profile: Profile) {
+        updateState { copy(showProfilePickerSheet = false) }
         sendGlobalEvent(UiEvent.EditProfile(profile.id))
     }
 
