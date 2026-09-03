@@ -96,7 +96,7 @@ class BoxService(private val service: Service, private val platformInterface: Pl
     private fun startCommandServer() {
         Libbox.promoteOOMDraft()
         runCatching {
-            Libbox::class.java.getMethod("promotePowerReportDraft").invoke(null)
+            Libbox::class.java.getMethod("discardPowerReportDraft").invoke(null)
         }
         val commandServer = CommandServer(this, platformInterface)
         commandServer.start()
@@ -295,7 +295,7 @@ class BoxService(private val service: Service, private val platformInterface: Pl
                 close()
             }
             runCatching {
-                Libbox::class.java.getMethod("promotePowerReportDraft").invoke(null)
+                Libbox::class.java.getMethod("discardPowerReportDraft").invoke(null)
             }
             PowerReportManager.refresh()
             Settings.startedByUser = false
