@@ -233,7 +233,6 @@ class MainActivity :
         enableEdgeToEdge()
 
         connection.reconnect()
-        RemoteControlManager.restore()
 
         UpdateState.loadFromCache()
         if (Settings.checkUpdateEnabled && !Vendor.installedFromFDroid()) {
@@ -936,7 +935,6 @@ class MainActivity :
                     add(Screen.Connections)
                 }
                 add(Screen.Log)
-                add(Screen.Tools)
                 add(Screen.Settings)
             }
 
@@ -944,7 +942,6 @@ class MainActivity :
             buildSet {
                 add(Screen.Dashboard.route)
                 add(Screen.Log.route)
-                add(Screen.Tools.route)
                 add(Screen.Settings.route)
                 if (useNavigationRail && showGroupsInNav) {
                     add(Screen.Groups.route)
@@ -1258,14 +1255,6 @@ class MainActivity :
                                             BadgedBox(badge = { Badge(containerColor = MaterialTheme.colorScheme.primary) }) {
                                                 Icon(screen.icon, contentDescription = null)
                                             }
-                                        } else if (screen == Screen.Tools && taildropFailedCount > 0) {
-                                            BadgedBox(badge = { Badge(containerColor = MaterialTheme.colorScheme.error) { Text("!") } }) {
-                                                Icon(screen.icon, contentDescription = null)
-                                            }
-                                        } else if (screen == Screen.Tools && toolsUnreadCount > 0) {
-                                            BadgedBox(badge = { Badge(containerColor = MaterialTheme.colorScheme.error) { Text("$toolsUnreadCount") } }) {
-                                                Icon(screen.icon, contentDescription = null)
-                                            }
                                         } else {
                                             Icon(screen.icon, contentDescription = null)
                                         }
@@ -1313,14 +1302,6 @@ class MainActivity :
                                         icon = {
                                             if (screen == Screen.Settings && hasUpdate) {
                                                 BadgedBox(badge = { Badge(containerColor = MaterialTheme.colorScheme.primary) }) {
-                                                    Icon(screen.icon, contentDescription = null)
-                                                }
-                                            } else if (screen == Screen.Tools && taildropFailedCount > 0) {
-                                                BadgedBox(badge = { Badge(containerColor = MaterialTheme.colorScheme.error) { Text("!") } }) {
-                                                    Icon(screen.icon, contentDescription = null)
-                                                }
-                                            } else if (screen == Screen.Tools && toolsUnreadCount > 0) {
-                                                BadgedBox(badge = { Badge(containerColor = MaterialTheme.colorScheme.error) { Text("$toolsUnreadCount") } }) {
                                                     Icon(screen.icon, contentDescription = null)
                                                 }
                                             } else {

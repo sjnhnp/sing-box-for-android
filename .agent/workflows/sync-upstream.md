@@ -27,6 +27,37 @@ These modifications improve battery life and reduce core latency.
 - **Status Refresh Throttling**:
   - `app/src/main/java/io/nekohasekai/sfa/utils/CommandClient.kt`: The `statusInterval` must be set to **3 seconds** (`3 * 1000 * 1000 * 1000`) instead of the default 1 second to reduce background CPU wakeups when the dashboard is open.
 
+### 3. Custom UI & Feature Slim-down (自定义精简与移除 🆕 Added 2026-09-04)
+为了保持客户端的极简与高效，移除了多余的调试/辅助功能及不常用的设置入口，并彻底拔除 Xposed 模块与远程控制功能：
+
+- **底栏与侧边栏移除“工具” (Tools)**:
+  - `app/src/main/java/io/nekohasekai/sfa/compose/navigation/NavigationDestinations.kt`: `bottomNavigationScreens` 中不可包含 `Screen.Tools`，底栏仅保留【仪表、日志、设置】。
+  - `app/src/main/java/io/nekohasekai/sfa/compose/MainActivity.kt`: `railScreens` 与 `allowedRoutes` 中不可包含 `Screen.Tools`，并清理其徽标逻辑。
+- **清理“工具”页面所有内置功能**:
+  - `app/src/main/java/io/nekohasekai/sfa/compose/screen/tools/ToolsScreen.kt`: 移除“网络”（网络质量、STUN 测试）与“调试”（崩溃报告、内存不足报告、电源报告）全部功能卡片。
+- **彻底移除“特权增强” (Xposed 模块)**:
+  - `app/src/main/AndroidManifest.xml`: 移除 `io.github.libxposed.service.XposedProvider`、`de.robv.android.xposed.category.MODULE_SETTINGS` 分类和 `@string/xposed_description`。
+  - `app/src/main/resources/META-INF/xposed/java_init.list`: 保持清空（禁用模块入口注册）。
+  - `app/src/main/java/io/nekohasekai/sfa/compose/navigation/Navigation.kt`: 移除 `settings/privilege*` 路由。
+  - `app/src/main/java/io/nekohasekai/sfa/compose/screen/settings/SettingsScreen.kt`: 移除 `privilege_settings` 入口项。
+- **彻底移除“远程控制” (Remote Control)**:
+  - `app/src/main/java/io/nekohasekai/sfa/compose/navigation/Navigation.kt`: 移除 `settings/remote_control*` 路由。
+  - `app/src/main/java/io/nekohasekai/sfa/compose/component/RemoteControlMenuItems.kt`: 菜单置空，`rememberRemoteServers` 保持返回空列表。
+  - `app/src/main/java/io/nekohasekai/sfa/compose/MainActivity.kt`: 移除启动时的 `RemoteControlManager.restore()`。
+  - `app/src/main/java/io/nekohasekai/sfa/compose/screen/settings/SettingsScreen.kt`: 移除 `remote_control` 入口项，将 `profile_override` 保持为 `isLast = true`。
+
+### 4. 协议瘦身与泄露防护 (14 核心协议白名单)
+在 `sing-box` 编译核心仓库中，仅保留 14 个协议：
+`Direct`, `Block`, `DNS`, `Socks`, `HTTP`, `Mixed`, `Selector`, `URLTest`, `VLESS`, `VMess`, `Trojan`, `Shadowsocks`, `Hysteria2`, `NaïveProxy`。
+- **Hysteria2 源码防泄露**:
+  - `protocol/hysteria2/outbound.go`: 必须移除 `"github.com/sagernet/sing-box/protocol/tuic"` 导入，类型断言必须使用 `(*Outbound)(nil)`，防止 Hysteria2 意外带入 TUIC 协议依赖。
+- **libbox 壳模块防泄露**:
+  - `experimental/libbox/native_shell_session.go`: 编译标签必须包含 `&& with_tailscale`。
+  - `experimental/libbox/native_shell_session_stub.go`: 编译标签必须包含 `|| !with_tailscale`，防止 Android 构建无条件打包 Tailscale。
+- **注册表与工作流**:
+  - `include/registry.go` & `generate-registry.sh`: 彻底排除 `snell`, `bridge`, `openconnect`, `openvpn`, `wireguard`, `tailscale` 等非白名单注册。
+  - `.github/workflows/build-slim.yml`: 在 `slim` 构建步骤中清理非白名单目录并按需执行 `go mod tidy`。
+
 ## 🔄 Workflow Steps
 
 1. **Setup & Fetch Upstream**
@@ -50,10 +81,17 @@ These modifications improve battery life and reduce core latency.
    - **Check Imports**: Ensure `DashboardViewModel.kt` still has `kotlinx.coroutines.flow.update`.
    - **Check Injection**: Ensure `MainActivity` shows `val viewModel: DashboardViewModel = hiltViewModel()`.
    - **Check Groups**: Ensure `GroupsViewModel` is injected, not manually instantiated.
-    - **检查刷新间隔**: 确保 `CommandClient.kt` 仍使用 3 秒间隔 (`3 * 1000 * 1000 * 1000`)。
+   - **检查刷新间隔**: 确保 `CommandClient.kt` 仍使用 3 秒间隔 (`3 * 1000 * 1000 * 1000`)。
+   - **检查底栏导航**: 确保 `NavigationDestinations.kt` 中 `bottomNavigationScreens` 不含 `Screen.Tools`，`MainActivity.kt` 的 `railScreens` 和 `allowedRoutes` 同样不含 `Screen.Tools`。
+   - **检查设置页面**: 确保 `SettingsScreen.kt` 中不含 `remote_control` 和 `privilege_settings`，且 `profile_override` 保持 `isLast = true`。
+   - **检查特权模块**: 确保 `AndroidManifest.xml` 中无 `XposedProvider` 与 `MODULE_SETTINGS`，`java_init.list` 保持清空。
+   - **检查远程控制**: 确保 `Navigation.kt` 中无 `remote_control` 路由，`RemoteControlMenuItems.kt` 保持空实现。
+   - **检查工具页面**: 确保 `ToolsScreen.kt` 中未被上游重新合入网络与调试功能。
+   - **检查协议泄露**: 确保同步 sing-box 核心代码时，`protocol/hysteria2/outbound.go` 未重新引入 `tuic`，`experimental/libbox/native_shell_session.go` 保持 `with_tailscale` 标签保护。
 6. **验证与提交**
    - Run compilation check: `./gradlew assembleDebug`
    - Commit message: `Merge upstream/dev: Preserved Hilt/MVI architecture and post-refactor optimizations`
 
 ## 🚨 AI Self-Memory Note
 You (the AI) should **always** look at the git history from `26b1a33` onwards before merging. This commit marks the "Era of Hilt/MVI". Any upstream change that attempts to revert code to a pre-Hilt state (e.g., direct field access in MainActivity) must be treated as a conflict and refactored into the MVI pattern.
+

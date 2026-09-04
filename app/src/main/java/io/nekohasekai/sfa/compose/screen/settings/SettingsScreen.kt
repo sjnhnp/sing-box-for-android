@@ -15,13 +15,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.OpenInNew
-import androidx.compose.material.icons.outlined.AdminPanelSettings
 import androidx.compose.material.icons.outlined.Code
 import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.FilterAlt
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.SettingsRemote
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Badge
 import androidx.compose.material3.Card
@@ -54,8 +52,6 @@ import io.nekohasekai.sfa.R
 import io.nekohasekai.sfa.compose.topbar.LocalScaffoldPadding
 import io.nekohasekai.sfa.compose.topbar.OverrideTopBar
 import io.nekohasekai.sfa.update.UpdateState
-import io.nekohasekai.sfa.utils.HookModuleUpdateNotifier
-import io.nekohasekai.sfa.utils.HookStatusClient
 import io.nekohasekai.sfa.vendor.Vendor
 
 // ============================================================================
@@ -79,12 +75,6 @@ fun SettingsScreen(navController: NavController) {
 
     val context = LocalContext.current
     val hasUpdate by UpdateState.hasUpdate
-    val hookStatus by HookStatusClient.status.collectAsState()
-    val hasPendingPrivilegeDowngrade = HookModuleUpdateNotifier.isDowngrade(hookStatus)
-    val hasPendingPrivilegeUpdate = HookModuleUpdateNotifier.isUpgrade(hookStatus)
-    LaunchedEffect(Unit) {
-        HookStatusClient.refresh()
-    }
 
     val scaffoldPadding = LocalScaffoldPadding.current
 
@@ -131,24 +121,6 @@ fun SettingsScreen(navController: NavController) {
                     title = stringResource(R.string.profile_override),
                     icon = Icons.Outlined.FilterAlt,
                     onClick = { navController.navigate("settings/profile_override") },
-                )
-
-                SettingsItem(
-                    title = stringResource(R.string.remote_control),
-                    icon = Icons.Outlined.SettingsRemote,
-                    onClick = { navController.navigate("settings/remote_control") },
-                )
-
-                SettingsItem(
-                    title = stringResource(R.string.privilege_settings),
-                    icon = Icons.Outlined.AdminPanelSettings,
-                    onClick = { navController.navigate("settings/privilege") },
-                    showBadge = hasPendingPrivilegeDowngrade || hasPendingPrivilegeUpdate,
-                    badgeColor = if (hasPendingPrivilegeDowngrade) {
-                        MaterialTheme.colorScheme.error
-                    } else {
-                        Color(0xFFFFC107)
-                    },
                     isLast = true,
                 )
             }
