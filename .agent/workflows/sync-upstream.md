@@ -45,6 +45,8 @@ These modifications improve battery life and reduce core latency.
   - `app/src/main/java/io/nekohasekai/sfa/compose/component/RemoteControlMenuItems.kt`: 菜单置空，`rememberRemoteServers` 保持返回空列表。
   - `app/src/main/java/io/nekohasekai/sfa/compose/MainActivity.kt`: 移除启动时的 `RemoteControlManager.restore()`。
   - `app/src/main/java/io/nekohasekai/sfa/compose/screen/settings/SettingsScreen.kt`: 移除 `remote_control` 入口项，将 `profile_override` 保持为 `isLast = true`。
+- **彻底移除设置中的“关于”分组 (文档与源代码)**:
+  - `app/src/main/java/io/nekohasekai/sfa/compose/screen/settings/SettingsScreen.kt`: 移除“关于”分组标题及内置的“文档”（`error_deprecated_documentation`）和“源代码”（`source_code`）外部跳转项。
 
 ### 4. 协议瘦身与泄露防护 (14 核心协议白名单)
 在 `sing-box` 编译核心仓库中，仅保留 14 个协议：
@@ -83,7 +85,7 @@ These modifications improve battery life and reduce core latency.
    - **Check Groups**: Ensure `GroupsViewModel` is injected, not manually instantiated.
    - **检查刷新间隔**: 确保 `CommandClient.kt` 仍使用 3 秒间隔 (`3 * 1000 * 1000 * 1000`)。
    - **检查底栏导航**: 确保 `NavigationDestinations.kt` 中 `bottomNavigationScreens` 不含 `Screen.Tools`，`MainActivity.kt` 的 `railScreens` 和 `allowedRoutes` 同样不含 `Screen.Tools`。
-   - **检查设置页面**: 确保 `SettingsScreen.kt` 中不含 `remote_control` 和 `privilege_settings`，且 `profile_override` 保持 `isLast = true`。
+   - **检查设置页面**: 确保 `SettingsScreen.kt` 中不含 `remote_control`、`privilege_settings` 以及“关于”分组（文档、源代码），且 `profile_override` 保持 `isLast = true`。
    - **检查特权模块**: 确保 `AndroidManifest.xml` 中无 `XposedProvider` 与 `MODULE_SETTINGS`，`java_init.list` 保持清空。
    - **检查远程控制**: 确保 `Navigation.kt` 中无 `remote_control` 路由，`RemoteControlMenuItems.kt` 保持空实现。
    - **检查工具页面**: 确保 `ToolsScreen.kt` 中未被上游重新合入网络与调试功能。

@@ -14,9 +14,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.outlined.OpenInNew
-import androidx.compose.material.icons.outlined.Code
-import androidx.compose.material.icons.outlined.Description
 import androidx.compose.material.icons.outlined.FilterAlt
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.Settings
@@ -126,50 +123,6 @@ fun SettingsScreen(navController: NavController) {
             }
         }
 
-        // 关于分组
-        SettingsSection(
-            title = stringResource(R.string.about)
-        ) {
-            SettingsCard {
-                SettingsItem(
-                    title = stringResource(R.string.error_deprecated_documentation),
-                    icon = Icons.Outlined.Description,
-                    onClick = {
-                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW)
-                        intent.data = android.net.Uri.parse("https://sing-box.sagernet.org/")
-                        context.startActivity(intent)
-                    },
-                    trailing = {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                        )
-                    },
-                    isFirst = true,
-                )
-
-                SettingsItem(
-                    title = stringResource(R.string.source_code),
-                    icon = Icons.Outlined.Code,
-                    onClick = {
-                        val intent = android.content.Intent(android.content.Intent.ACTION_VIEW)
-                        intent.data = android.net.Uri.parse("https://github.com/sjnhnp/sing-box")
-                        context.startActivity(intent)
-                    },
-                    trailing = {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Outlined.OpenInNew,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-                        )
-                    },
-                    isLast = true,
-                )
-            }
-        }
 
         Spacer(modifier = Modifier.height(8.dp))
     }
