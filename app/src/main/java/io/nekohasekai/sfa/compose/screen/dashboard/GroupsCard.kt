@@ -2,14 +2,13 @@ package io.nekohasekai.sfa.compose.screen.dashboard
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -20,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandMore
@@ -51,9 +51,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.graphicsLayer
@@ -290,8 +288,8 @@ private fun GroupsCardContent(
                             }
                         }
                     } else {
-                        item(key = "dots:${group.tag}", contentType = "GroupDots") {
-                            GroupDotsGrid(
+                        item(key = "selected:${group.tag}", contentType = "GroupSelected") {
+                            GroupSelectedRow(
                                 group = group,
                                 palette = palette,
                                 onClick = { onToggleExpanded(group.tag) },
@@ -444,13 +442,22 @@ private fun GroupHeader(
 }
 
 @Composable
-private fun GroupDotsGrid(
+private fun GroupSelectedRow(
     group: Group,
     palette: UrlTestPalette,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val selectedItem = remember(group.selected, group.items) {
+        group.items.find { it.tag == group.selected }
+    }
+    val dotColor = when {
+        selectedItem != null && selectedItem.urlTestDelay > 0 -> palette.forDelay(selectedItem.urlTestDelay)
+        group.selected.isNotEmpty() -> MaterialTheme.colorScheme.outlineVariant
+        else -> palette.neutral
+    }
     Surface(
+        onClick = onClick,
         modifier =
         modifier
             .padding(bottom = 12.dp)
@@ -458,44 +465,60 @@ private fun GroupDotsGrid(
         shape = GroupCardBottomShape,
         color = MaterialTheme.colorScheme.surfaceContainerLow,
     ) {
-        BoxWithConstraints(
+        Row(
             modifier =
             Modifier
-                .clickable(onClick = onClick)
                 .fillMaxWidth()
-                .padding(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 16.dp),
+                .padding(start = 16.dp, end = 16.dp, top = 2.dp, bottom = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
-            val dotSize = 11.dp
-            val dotSpacing = 4.dp
-            val columns = maxOf(1, ((maxWidth + dotSpacing) / (dotSize + dotSpacing)).toInt())
-            val rows = (group.items.size + columns - 1) / columns
-            val gridHeight = dotSize * rows + dotSpacing * maxOf(0, rows - 1)
-            Canvas(
-                modifier =
-                Modifier
-                    .fillMaxWidth()
-                    .height(gridHeight),
+            Row(
+                modifier = Modifier.weight(1f, fill = false),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                val dotSizePx = dotSize.toPx()
-                val dotSpacingPx = dotSpacing.toPx()
-                val cornerRadius = CornerRadius(4.dp.toPx())
-                val selectedDotRadius = 2.dp.toPx()
-                group.items.forEachIndexed { index, item ->
-                    val x = (index % columns) * (dotSizePx + dotSpacingPx)
-                    val y = (index / columns) * (dotSizePx + dotSpacingPx)
-                    drawRoundRect(
-                        color = palette.forDelay(item.urlTestDelay),
-                        topLeft = Offset(x, y),
-                        size = Size(dotSizePx, dotSizePx),
-                        cornerRadius = cornerRadius,
+                Box(
+                    modifier =
+                    Modifier
+                        .size(8.dp)
+                        .background(
+                            color = dotColor,
+                            shape = CircleShape,
+                        ),
+                )
+                Text(
+                    text = group.selected.ifEmpty { "-" },
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    color =
+                    if (group.selected.isNotEmpty()) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.onSurfaceVariant
+                    },
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                if (selectedItem != null && selectedItem.displayType.isNotEmpty()) {
+                    Text(
+                        text = selectedItem.displayType,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    if (item.tag == group.selected) {
-                        drawCircle(
-                            color = Color.White,
-                            radius = selectedDotRadius,
-                            center = Offset(x + dotSizePx / 2, y + dotSizePx / 2),
-                        )
-                    }
+                }
+                if (selectedItem != null && selectedItem.urlTestDelay > 0) {
+                    Text(
+                        text = "${selectedItem.urlTestDelay}ms",
+                        style = MaterialTheme.typography.labelSmall,
+                        fontWeight = FontWeight.SemiBold,
+                        color = palette.forDelay(selectedItem.urlTestDelay),
+                    )
                 }
             }
         }

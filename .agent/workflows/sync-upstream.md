@@ -47,6 +47,8 @@ These modifications improve battery life and reduce core latency.
   - `app/src/main/java/io/nekohasekai/sfa/compose/screen/settings/SettingsScreen.kt`: 移除 `remote_control` 入口项，将 `profile_override` 保持为 `isLast = true`。
 - **彻底移除设置中的“关于”分组 (文档与源代码)**:
   - `app/src/main/java/io/nekohasekai/sfa/compose/screen/settings/SettingsScreen.kt`: 移除“关于”分组标题及内置的“文档”（`error_deprecated_documentation`）和“源代码”（`source_code`）外部跳转项。
+- **出站分组折叠显示选中的线路标签 (Outbound Group Collapsed Selected Tag)**:
+  - `app/src/main/java/io/nekohasekai/sfa/compose/screen/dashboard/GroupsCard.kt`: 移除上游折叠时的点阵矩阵 (`GroupDotsGrid`)，替换为显示当前选中的线路名称 tag、协议类型及延迟状态的卡片摘要行 (`GroupSelectedRow`)。
 
 ### 4. 协议瘦身与泄露防护 (14 核心协议白名单)
 在 `sing-box` 编译核心仓库中，仅保留 14 个协议：
@@ -89,6 +91,7 @@ These modifications improve battery life and reduce core latency.
    - **检查特权模块**: 确保 `AndroidManifest.xml` 中无 `XposedProvider` 与 `MODULE_SETTINGS`，`java_init.list` 保持清空。
    - **检查远程控制**: 确保 `Navigation.kt` 中无 `remote_control` 路由，`RemoteControlMenuItems.kt` 保持空实现。
    - **检查工具页面**: 确保 `ToolsScreen.kt` 中未被上游重新合入网络与调试功能。
+   - **检查出站分组折叠状态**: 确保 `GroupsCard.kt` 中使用 `GroupSelectedRow` 显示选中线路名称 tag，未被上游覆盖为 `GroupDotsGrid` 点阵。
    - **检查协议泄露**: 确保同步 sing-box 核心代码时，`protocol/hysteria2/outbound.go` 未重新引入 `tuic`，`experimental/libbox/native_shell_session.go` 保持 `with_tailscale` 标签保护。
 6. **验证与提交**
    - Run compilation check: `./gradlew assembleDebug`
@@ -96,4 +99,3 @@ These modifications improve battery life and reduce core latency.
 
 ## 🚨 AI Self-Memory Note
 You (the AI) should **always** look at the git history from `26b1a33` onwards before merging. This commit marks the "Era of Hilt/MVI". Any upstream change that attempts to revert code to a pre-Hilt state (e.g., direct field access in MainActivity) must be treated as a conflict and refactored into the MVI pattern.
-
