@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.net.ConnectivityManager
 import android.net.wifi.WifiManager
+import android.os.Build
 import android.os.PowerManager
 import android.util.Log
 import androidx.core.content.getSystemService
@@ -29,6 +30,7 @@ import io.nekohasekai.sfa.vendor.Vendor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 import java.io.File
 import java.util.Locale
 import dagger.hilt.android.HiltAndroidApp
@@ -51,8 +53,6 @@ class Application : Application() {
         }.onFailure {
             Log.d("Application", "set locale: ${it.message}")
         }
-        HookStatusClient.register(this)
-        PrivilegeSettingsClient.register(this)
 
         val baseDir = filesDir
         baseDir.mkdirs()
@@ -68,6 +68,9 @@ class Application : Application() {
 
         @Suppress("OPT_IN_USAGE")
         GlobalScope.launch(Dispatchers.IO) {
+            Settings.dataStore.initialize()
+            HookStatusClient.register(this@Application)
+            PrivilegeSettingsClient.register(this@Application)
             initialize(baseDir, workingDir, tempDir)
             UpdateProfileWork.reconfigureUpdater()
             HookModuleUpdateNotifier.sync(this@Application)
@@ -134,6 +137,15 @@ class Application : Application() {
         it.oomMemoryLimit = Settings.oomMemoryLimitMB.toLong() * 1024L * 1024L
         runCatching {
             SetupOptions::class.java.getMethod("setPowerReportEnabled", Boolean::class.javaPrimitiveType).invoke(it, Settings.powerReportEnabled)
+        }
+        runCatching {
+            val platformMetadataJson = JSONObject().apply {
+                put("os", "Android " + Build.VERSION.RELEASE)
+                put("sdk", Build.VERSION.SDK_INT)
+                put("manufacturer", Build.MANUFACTURER)
+                put("model", Build.MODEL)
+            }.toString()
+            SetupOptions::class.java.getMethod("setPlatformMetadata", String::class.java).invoke(it, platformMetadataJson)
         }
     }
 

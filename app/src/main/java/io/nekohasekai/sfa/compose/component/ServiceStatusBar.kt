@@ -151,13 +151,15 @@ fun ServiceStatusBar(
                         modifier = Modifier.weight(1f),
                     )
 
-                    // 连接数按钮
-                    ActionChip(
-                        count = connectionsCount,
-                        icon = Icons.Outlined.Cable,
-                        contentDescription = stringResource(R.string.title_connections),
-                        onClick = onConnectionsClick,
-                    )
+                    // 连接数按钮 (仅在服务已启动时显示)
+                    if (serviceStatus == Status.Started) {
+                        ActionChip(
+                            count = connectionsCount,
+                            icon = Icons.Outlined.Cable,
+                            contentDescription = stringResource(R.string.title_connections),
+                            onClick = onConnectionsClick,
+                        )
+                    }
 
                     // 分组按钮
                     if (hasGroups) {

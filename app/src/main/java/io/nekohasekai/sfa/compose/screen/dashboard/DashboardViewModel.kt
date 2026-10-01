@@ -32,26 +32,25 @@ import java.util.Collections
 import java.util.Date
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
-
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 
 @Serializable
-enum class CardGroup {
-    ClashMode,
-    UploadTraffic,
-    DownloadTraffic,
-    Debug,
-    Connections,
-    SystemProxy,
-    Profiles,
+enum class CardPairGroup {
+    Traffic,
+    Statistics,
 }
 
 @Serializable
-enum class CardWidth {
-    Half,
-    Full,
+enum class CardGroup(val pairGroup: CardPairGroup? = null) {
+    ClashMode,
+    UploadTraffic(CardPairGroup.Traffic),
+    DownloadTraffic(CardPairGroup.Traffic),
+    Debug(CardPairGroup.Statistics),
+    Connections(CardPairGroup.Statistics),
+    SystemProxy,
+    Profiles,
 }
 
 data class DashboardUiState(
@@ -112,16 +111,6 @@ data class DashboardUiState(
             CardGroup.SystemProxy,
             CardGroup.ClashMode,
             CardGroup.Profiles,
-        ),
-    val cardWidths: Map<CardGroup, CardWidth> =
-        mapOf(
-            CardGroup.ClashMode to CardWidth.Full,
-            CardGroup.UploadTraffic to CardWidth.Half,
-            CardGroup.DownloadTraffic to CardWidth.Half,
-            CardGroup.Debug to CardWidth.Half,
-            CardGroup.Connections to CardWidth.Half,
-            CardGroup.SystemProxy to CardWidth.Full,
-            CardGroup.Profiles to CardWidth.Full,
         ),
     val showCardSettingsDialog: Boolean = false,
 ) {

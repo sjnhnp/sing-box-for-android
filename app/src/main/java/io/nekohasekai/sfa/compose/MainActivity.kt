@@ -232,25 +232,28 @@ class MainActivity :
         }
         enableEdgeToEdge()
 
-        connection.reconnect()
+        lifecycleScope.launch {
+            Settings.dataStore.initialize()
+            connection.reconnect()
 
-        UpdateState.loadFromCache()
-        if (Settings.checkUpdateEnabled && !Vendor.installedFromFDroid()) {
-            lifecycleScope.launch(Dispatchers.IO) {
-                try {
-                    val updateInfo = Vendor.checkUpdateAsync()
-                    UpdateState.setUpdate(updateInfo)
-                } catch (_: Exception) {
-                    UpdateState.setUpdate(null)
+            UpdateState.loadFromCache()
+            if (Settings.checkUpdateEnabled && !Vendor.installedFromFDroid()) {
+                lifecycleScope.launch(Dispatchers.IO) {
+                    try {
+                        val updateInfo = Vendor.checkUpdateAsync()
+                        UpdateState.setUpdate(updateInfo)
+                    } catch (_: Exception) {
+                        UpdateState.setUpdate(null)
+                    }
                 }
             }
-        }
 
-        handleIntent(intent)
+            handleIntent(intent)
 
-        setContent {
-            Theme {
-                App()
+            setContent {
+                Theme {
+                    App()
+                }
             }
         }
     }
@@ -321,36 +324,41 @@ class MainActivity :
 
     @SuppressLint("NewApi")
     fun startService() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !ServiceNotification.checkPermission()) {
-            if (!notificationPermissionRequested) {
-                notificationPermissionRequested = true
-                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                return
+        lifecycleScope.launch {
+            Settings.dataStore.initialize()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !ServiceNotification.checkPermission()) {
+                if (!notificationPermissionRequested) {
+                    notificationPermissionRequested = true
+                    notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                    return@launch
+                }
+                if (Settings.dynamicNotification) {
+                    onServiceAlert(Alert.RequestNotificationPermission, null)
+                    return@launch
+                }
             }
-            if (Settings.dynamicNotification) {
-                onServiceAlert(Alert.RequestNotificationPermission, null)
-                return
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN &&
+                !hasPermission(Manifest.permission.ACCESS_LOCAL_NETWORK) &&
+                !localNetworkPermissionRequested
+            ) {
+                localNetworkPermissionRequested = true
+                if (ActivityCompat.shouldShowRequestPermissionRationale(this@MainActivity, Manifest.permission.ACCESS_LOCAL_NETWORK)) {
+                    showLocalNetworkPermissionDialog = true
+                } else {
+                    localNetworkPermissionLauncher.launch(Manifest.permission.ACCESS_LOCAL_NETWORK)
+                }
+                return@launch
             }
+            startService0()
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.CINNAMON_BUN &&
-            !hasPermission(Manifest.permission.ACCESS_LOCAL_NETWORK) &&
-            !localNetworkPermissionRequested
-        ) {
-            localNetworkPermissionRequested = true
-            if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_LOCAL_NETWORK)) {
-                showLocalNetworkPermissionDialog = true
-            } else {
-                localNetworkPermissionLauncher.launch(Manifest.permission.ACCESS_LOCAL_NETWORK)
-            }
-            return
-        }
-        startService0()
     }
 
     private fun startService0() {
         lifecycleScope.launch(Dispatchers.IO) {
             if (Settings.rebuildServiceMode()) {
-                connection.reconnect()
+                withContext(Dispatchers.Main) {
+                    connection.reconnect()
+                }
             }
             if (Settings.serviceMode == ServiceMode.VPN) {
                 if (prepare()) {
@@ -918,12 +926,7 @@ class MainActivity :
             }
         }
         val showGroupsInNav = dashboardUiState.hasGroups
-        val showConnectionsInNav =
-            if (isRemote) {
-                remoteConnected
-            } else {
-                currentServiceStatus == Status.Started || currentServiceStatus == Status.Starting
-            }
+        val connectionsAvailable = if (isRemote) remoteConnected else currentServiceStatus == Status.Started
 
         val railScreens =
             buildList {
@@ -931,7 +934,7 @@ class MainActivity :
                 if (showGroupsInNav) {
                     add(Screen.Groups)
                 }
-                if (showConnectionsInNav) {
+                if (connectionsAvailable) {
                     add(Screen.Connections)
                 }
                 add(Screen.Log)
@@ -946,7 +949,7 @@ class MainActivity :
                 if (useNavigationRail && showGroupsInNav) {
                     add(Screen.Groups.route)
                 }
-                if (useNavigationRail && showConnectionsInNav) {
+                if (useNavigationRail && connectionsAvailable) {
                     add(Screen.Connections.route)
                 }
             }
@@ -1342,7 +1345,6 @@ class MainActivity :
                 showGroupsSheet = false
             }
         }
-        val connectionsAvailable = if (isRemote) remoteConnected else currentServiceStatus == Status.Started
         LaunchedEffect(connectionsAvailable) {
             if (!connectionsAvailable) {
                 showConnectionsSheet = false

@@ -114,19 +114,10 @@ open class CommandClient @Inject constructor(
         Outbounds,
     }
 
-    enum class ConnectionErrorKind {
-        // A connect attempt failed; retrying is not expected to succeed.
-        ConnectFailed,
-
-        // An established connection dropped (app suspension, network change,
-        // server restart); reconnecting may recover.
-        ConnectionLost,
-    }
-
     interface Handler {
         fun onConnected() {}
         fun onDisconnected() {}
-        fun onConnectionError(kind: ConnectionErrorKind, message: String) {}
+        fun onConnectionError(message: String) {}
         fun updateStatus(status: StatusMessage) {}
         fun setDefaultLogLevel(level: Int) {}
         fun clearLogs() {}
@@ -261,10 +252,7 @@ open class CommandClient @Inject constructor(
                 Log.d("CommandClient", "connect failed", e)
                 if (isActiveEpoch(epoch)) {
                     getAllHandlers().forEach {
-                        it.onConnectionError(
-                            ConnectionErrorKind.ConnectFailed,
-                            e.message ?: e.toString()
-                        )
+                        it.onConnectionError(e.message ?: e.toString())
                     }
                 }
                 return@launch
@@ -327,7 +315,7 @@ open class CommandClient @Inject constructor(
             }
             if (message != null) {
                 getAllHandlers().forEach {
-                    it.onConnectionError(ConnectionErrorKind.ConnectionLost, message)
+                    it.onConnectionError(message)
                 }
             }
             Log.d("CommandClient", "disconnected: $message")

@@ -2,6 +2,7 @@ package io.nekohasekai.sfa.database
 
 import android.os.Build
 import androidx.room.Room
+import io.nekohasekai.libbox.Libbox
 import io.nekohasekai.sfa.Application
 import io.nekohasekai.sfa.BuildConfig
 import io.nekohasekai.sfa.bg.ProxyService
@@ -20,7 +21,6 @@ import io.nekohasekai.sfa.ktx.stringSet
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import org.json.JSONObject
 import java.io.File
 
 object Settings {
@@ -31,13 +31,12 @@ object Settings {
             Application.application,
             KeyValueDatabase::class.java,
             Path.SETTINGS_DATABASE_PATH,
-        ).allowMainThreadQueries()
-            .fallbackToDestructiveMigration()
+        ).fallbackToDestructiveMigration()
             .enableMultiInstanceInvalidation()
             .setQueryExecutor { GlobalScope.launch { it.run() } }
             .build()
     }
-    val dataStore = RoomPreferenceDataStore(instance.keyValuePairDao())
+    val dataStore = RoomPreferenceDataStore { instance.keyValuePairDao() }
     var selectedProfile by dataStore.long(SettingsKey.SELECTED_PROFILE) { -1L }
     var serviceMode by dataStore.string(SettingsKey.SERVICE_MODE) { ServiceMode.NORMAL }
     var startedByUser by dataStore.boolean(SettingsKey.STARTED_BY_USER)
@@ -160,15 +159,26 @@ object Settings {
     private suspend fun needVPNService(): Boolean {
         val selectedProfileId = selectedProfile
         if (selectedProfileId == -1L) return false
-        val profile = ProfileManager.get(selectedProfile) ?: return false
-        val content = JSONObject(File(profile.typed.path).readText())
-        val inbounds = content.getJSONArray("inbounds")
-        for (index in 0 until inbounds.length()) {
-            val inbound = inbounds.getJSONObject(index)
-            if (inbound.getString("type") == "tun") {
-                return true
-            }
+        val profile = ProfileManager.get(selectedProfileId) ?: return false
+        val text = File(profile.typed.path).readText()
+        val hasTunInboundMethod = runCatching {
+            Libbox::class.java.getMethod("hasTunInbound", String::class.java)
+        }.getOrNull()
+        if (hasTunInboundMethod != null) {
+            return (hasTunInboundMethod.invoke(null, text) as? Boolean) ?: false
         }
-        return false
+        return try {
+            val content = org.json.JSONObject(text)
+            val inbounds = content.optJSONArray("inbounds") ?: return false
+            for (index in 0 until inbounds.length()) {
+                val inbound = inbounds.optJSONObject(index)
+                if (inbound?.optString("type") == "tun") {
+                    return true
+                }
+            }
+            false
+        } catch (_: Exception) {
+            false
+        }
     }
 }
